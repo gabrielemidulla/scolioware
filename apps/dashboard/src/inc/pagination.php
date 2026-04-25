@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+// __() is used at render time; ensure Locale is available if only pagination was loaded first.
+if (!function_exists('__')) {
+    require_once __DIR__ . '/Locale.php';
+    Locale::init();
+}
+if (!function_exists('sv_t_gender')) {
+    require_once __DIR__ . '/sv_i18n.php';
+}
+
 /**
  * Merge current GET with overrides; drop empty string / null values for cleaner URLs.
  */
@@ -84,7 +93,7 @@ function sv_render_pagination(string $scriptPath, int $page, int $totalPages): v
         $start = max(1, $end - $window + 1);
     }
 
-    echo '<nav class="sv-pagination-nav mt-2" aria-label="Page navigation"><ul class="pagination pagination-sm mb-0">';
+    echo '<nav class="sv-pagination-nav mt-2" aria-label="' . htmlspecialchars(__('pagination.aria'), ENT_QUOTES, 'UTF-8') . '"><ul class="pagination pagination-sm mb-0">';
 
     $prev = max(1, $page - 1);
     if ($page <= 1) {
@@ -136,7 +145,7 @@ function sv_render_pagination_for(string $scriptPath, string $pageQueryKey, int 
         $start = max(1, $end - $window + 1);
     }
 
-    echo '<nav class="sv-pagination-nav" aria-label="Page navigation"><ul class="pagination pagination-sm mb-0">';
+    echo '<nav class="sv-pagination-nav" aria-label="' . htmlspecialchars(__('pagination.aria'), ENT_QUOTES, 'UTF-8') . '"><ul class="pagination pagination-sm mb-0">';
 
     $prev = max(1, $page - 1);
     if ($page <= 1) {

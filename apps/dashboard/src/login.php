@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 require __DIR__ . '/inc/db.php';
 require __DIR__ . '/inc/auth.php';
+require_once __DIR__ . '/inc/Locale.php';
 
 sv_session_start();
+Locale::init();
 
 try {
     sv_ensure_admin();
@@ -25,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     if ($username === '' || $password === '') {
-        $error = 'Username and password are required.';
+        $error = __('login.error_required');
     } else {
         $row = sv_find_physician_by_username($username);
         if ($row && password_verify($password, $row['password_hash'])) {
@@ -40,18 +42,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . $next);
             exit;
         }
-        $error = 'Invalid username or password.';
+        $error = __('login.error_invalid');
     }
 }
 
 $csrf = sv_csrf_token();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(Locale::htmlLang(), ENT_QUOTES, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign in · Scoliosoft</title>
+    <title><?= htmlspecialchars(__('login.page_title'), ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
@@ -67,7 +69,7 @@ $csrf = sv_csrf_token();
         <div class="sv-auth-brand">
             <img class="sv-brand-logo" src="assets/img/brand-scoliosoft-teal.svg" width="365" height="65" alt="Scoliosoft">
         </div>
-        <h1 class="visually-hidden">Sign in</h1>
+        <h1 class="visually-hidden"><?= htmlspecialchars(__('login.heading'), ENT_QUOTES, 'UTF-8') ?></h1>
         <?php if ($error !== ''): ?>
             <div class="alert alert-danger py-2 mb-3" role="alert">
                 <i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($error) ?>
@@ -76,25 +78,28 @@ $csrf = sv_csrf_token();
         <form method="post" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <div class="mb-3">
-                <label class="form-label">Username</label>
+                <label class="form-label"><?= htmlspecialchars(__('login.label_username'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="username" required maxlength="64"
                        autofocus autocomplete="username"
                        value="<?= htmlspecialchars($username) ?>">
             </div>
             <div class="mb-3">
-                <label class="form-label">Password</label>
+                <label class="form-label"><?= htmlspecialchars(__('login.label_password'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="password" name="password" required
                        autocomplete="current-password">
             </div>
             <button type="submit" class="btn btn-primary w-100">
-                <i class="fa-solid fa-right-to-bracket fa-fw"></i> Sign in
+                <i class="fa-solid fa-right-to-bracket fa-fw"></i> <?= htmlspecialchars(__('login.submit'), ENT_QUOTES, 'UTF-8') ?>
             </button>
         </form>
         <p class="sv-auth-help mt-3 mb-0 text-muted">
-            Lost your password? Ask the administrator for a reset link.
+            <?= htmlspecialchars(__('login.help_reset'), ENT_QUOTES, 'UTF-8') ?>
         </p>
         </div>
     </div>
 </main>
+<div class="sv-auth-locale-dock">
+    <?php Locale::renderLanguageSwitcher(); ?>
+</div>
 </body>
 </html>

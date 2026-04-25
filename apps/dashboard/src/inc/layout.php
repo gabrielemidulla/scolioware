@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/topbar.php';
+require_once __DIR__ . '/Locale.php';
+require_once __DIR__ . '/sv_i18n.php';
+Locale::init();
 
 /**
  * Shared layout helpers for the Scoliosoft dashboard.
@@ -19,13 +22,13 @@ function sv_current_page(): string
 function sv_nav_items(bool $isAdmin): array
 {
     $items = [
-        ['href' => 'index.php',      'label' => 'Dashboard',    'icon' => 'fa-gauge-high'],
-        ['href' => 'patients.php',   'label' => 'Patients',     'icon' => 'fa-user-injured'],
-        ['href' => 'queue.php',      'label' => 'Report queue', 'icon' => 'fa-list-check'],
-        ['href' => 'new_report.php', 'label' => 'New report',   'icon' => 'fa-file-circle-plus'],
+        ['href' => 'index.php',      'label' => __('nav.dashboard'),    'icon' => 'fa-gauge-high'],
+        ['href' => 'patients.php',   'label' => __('nav.patients'),     'icon' => 'fa-user-injured'],
+        ['href' => 'queue.php',      'label' => __('nav.report_queue'), 'icon' => 'fa-list-check'],
+        ['href' => 'new_report.php', 'label' => __('nav.new_report'),   'icon' => 'fa-file-circle-plus'],
     ];
     if ($isAdmin) {
-        $items[] = ['href' => 'physicians.php', 'label' => 'Physicians', 'icon' => 'fa-user-doctor'];
+        $items[] = ['href' => 'physicians.php', 'label' => __('nav.physicians'), 'icon' => 'fa-user-doctor'];
     }
     return $items;
 }
@@ -36,11 +39,11 @@ function sv_layout_start(string $pageTitle): void
     $user = sv_current_user();
     $isAdmin = $user !== null && (int) $user['is_admin'] === 1;
     ?><!DOCTYPE html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(Locale::htmlLang(), ENT_QUOTES, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle) ?> · Scoliosoft</title>
+    <title><?= htmlspecialchars($pageTitle) ?> <?= htmlspecialchars(__('common.brand_suffix'), ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
@@ -55,7 +58,7 @@ function sv_layout_start(string $pageTitle): void
             <img class="sv-brand-logo" src="assets/img/brand-scoliosoft-teal.svg" width="365" height="65" alt="Scoliosoft">
         </div>
         <ul class="sv-nav">
-            <li class="sv-nav-section">Main</li>
+            <li class="sv-nav-section"><?= htmlspecialchars(__('nav.section.main'), ENT_QUOTES, 'UTF-8') ?></li>
             <?php foreach (sv_nav_items($isAdmin) as $item): ?>
                 <li>
                     <a href="<?= htmlspecialchars($item['href']) ?>" class="<?= $current === $item['href'] ? 'active' : '' ?>">
@@ -65,28 +68,31 @@ function sv_layout_start(string $pageTitle): void
                 </li>
             <?php endforeach; ?>
             <?php if ($user !== null): ?>
-                <li class="sv-nav-section">Account</li>
+                <li class="sv-nav-section"><?= htmlspecialchars(__('nav.section.account'), ENT_QUOTES, 'UTF-8') ?></li>
                 <li>
                     <a href="account.php" class="<?= $current === 'account.php' ? 'active' : '' ?>">
                         <i class="fa-solid fa-key fa-fw"></i>
-                        <span>Change password</span>
+                        <span><?= htmlspecialchars(__('nav.change_password'), ENT_QUOTES, 'UTF-8') ?></span>
                     </a>
                 </li>
                 <li>
                     <a href="logout.php">
                         <i class="fa-solid fa-arrow-right-from-bracket fa-fw"></i>
-                        <span>Log out</span>
+                        <span><?= htmlspecialchars(__('nav.logout'), ENT_QUOTES, 'UTF-8') ?></span>
                     </a>
                 </li>
             <?php endif; ?>
         </ul>
         <div class="sv-sidebar-footer">
             <?php if ($user !== null): ?>
-                <i class="fa-solid <?= $isAdmin ? 'fa-user-shield' : 'fa-user-doctor' ?>"></i>
-                <strong><?= htmlspecialchars($user['username']) ?></strong>
-                <?= $isAdmin ? '<span class="text-warning">(admin)</span>' : '' ?>
+                <?php Locale::renderLanguageSwitcher(); ?>
+                <div class="sv-sidebar-user">
+                    <i class="fa-solid <?= $isAdmin ? 'fa-user-shield' : 'fa-user-doctor' ?>"></i>
+                    <strong><?= htmlspecialchars($user['username']) ?></strong>
+                    <?= $isAdmin ? '<span class="text-warning">' . htmlspecialchars(__('nav.admin_badge'), ENT_QUOTES, 'UTF-8') . '</span>' : '' ?>
+                </div>
             <?php else: ?>
-                <i class="fa-solid fa-circle-info"></i> Scoliosoft Dashboard
+                <i class="fa-solid fa-circle-info"></i> <?= htmlspecialchars(__('footer.app_line'), ENT_QUOTES, 'UTF-8') ?>
             <?php endif; ?>
         </div>
     </aside>

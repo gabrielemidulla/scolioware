@@ -13,7 +13,7 @@ sv_require_auth();
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id <= 0) {
     http_response_code(400);
-    echo 'Missing patient id';
+    echo htmlspecialchars((string) __('patient.err_missing_id'), ENT_QUOTES, 'UTF-8');
     exit;
 }
 
@@ -23,7 +23,7 @@ $stmt->execute([$id]);
 $patient = $stmt->fetch();
 if (!$patient) {
     http_response_code(404);
-    echo 'Patient not found';
+    echo htmlspecialchars((string) __('patient.err_not_found'), ENT_QUOTES, 'UTF-8');
     exit;
 }
 
@@ -204,54 +204,68 @@ $reports = $listStmt->fetchAll();
 
 $from = $totalReports === 0 ? 0 : $offset + 1;
 $to = min($offset + count($reports), $totalReports);
+$rowsPart = $totalReports > 0
+    ? (string) __('patient.reports_count_rows', ['from' => (int) $from, 'to' => (int) $to])
+    : '';
+$reportsLine = (string) __('patient.reports_count_wrap', [
+    'n' => (int) $totalReports,
+    'rows' => $rowsPart,
+    'newest' => (string) __('patient.reports_sub'),
+]);
+$uCm = (string) __('patient.unit_cm');
+$uKg = (string) __('patient.unit_kg');
 
-$genderLabel = $patient['gender'] === 'non_binary' ? 'non-binary' : (string) $patient['gender'];
+$patientDisplayName = $patient['last_name'] . ', ' . $patient['first_name'];
+$genderLabel = sv_t_gender((string) $patient['gender']);
 
-sv_layout_start('Patient · ' . $patient['last_name'] . ', ' . $patient['first_name']);
-$patientCrumbLabel = $patient['last_name'] . ', ' . $patient['first_name'];
+sv_layout_start(
+    (string) __('patient.title', ['name' => $patientDisplayName])
+);
+$patientCrumbLabel = $patientDisplayName;
+$headingName = htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name'], ENT_QUOTES, 'UTF-8');
 ob_start();
 if (sv_back_validate(sv_back_get_raw()) !== null): ?>
             <a href="<?= htmlspecialchars(sv_back_or('patients.php'), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary">
-                <i class="fa-solid fa-arrow-left fa-fw"></i> Back
+                <i class="fa-solid fa-arrow-left fa-fw"></i> <?= htmlspecialchars((string) __('patient.back'), ENT_QUOTES, 'UTF-8') ?>
             </a>
         <?php else: ?>
             <a href="patients.php" class="btn btn-secondary">
-                <i class="fa-solid fa-arrow-left fa-fw"></i> All patients
+                <i class="fa-solid fa-arrow-left fa-fw"></i> <?= htmlspecialchars((string) __('patient.all'), ENT_QUOTES, 'UTF-8') ?>
             </a>
         <?php endif; ?>
         <a href="<?= htmlspecialchars(sv_append_back('new_report.php'), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-primary">
-            <i class="fa-solid fa-file-circle-plus fa-fw"></i> New report
+            <i class="fa-solid fa-file-circle-plus fa-fw"></i> <?= htmlspecialchars((string) __('patient.new_report'), ENT_QUOTES, 'UTF-8') ?>
         </a>
 <?php
 $topActions = ob_get_clean();
 sv_topbar(
     [
-        sv_crumb('Dashboard', 'index.php'),
-        sv_crumb('Patients', 'patients.php'),
+        sv_crumb((string) __('nav.dashboard'), 'index.php'),
+        sv_crumb((string) __('nav.patients'), 'patients.php'),
         sv_crumb($patientCrumbLabel, null),
     ],
-    '<i class="fa-solid fa-user-injured"></i> ' . htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']),
+    '<i class="fa-solid fa-user-injured"></i> ' . $headingName,
     $topActions
 );
 ?>
 
 <div class="sv-card mb-3">
     <div class="sv-card-header">
-        <i class="fa-solid fa-id-card"></i> Patient details
+        <i class="fa-solid fa-id-card"></i> <?= htmlspecialchars((string) __('patient.details'), ENT_QUOTES, 'UTF-8') ?>
     </div>
     <div class="sv-card-body">
         <div class="row g-2 small">
-            <div class="col-md-3"><span class="text-muted">Patient ID</span><br><strong>#<?= (int) $patient['id'] ?></strong></div>
-            <div class="col-md-3"><span class="text-muted">Tax code</span><br><code><?= htmlspecialchars($patient['tax_code']) ?></code></div>
-            <div class="col-md-3"><span class="text-muted">Birth date</span><br><?= htmlspecialchars($patient['birth_date']) ?></div>
-            <div class="col-md-3"><span class="text-muted">Gender</span><br><?= htmlspecialchars($genderLabel) ?></div>
-            <div class="col-md-3"><span class="text-muted">Last height (cm)</span><br><?php
+            <div class="col-md-3"><span class="text-muted"><?= htmlspecialchars((string) __('patient.id'), ENT_QUOTES, 'UTF-8') ?></span><br><strong>#<?= (int) $patient['id'] ?></strong></div>
+            <div class="col-md-3"><span class="text-muted"><?= htmlspecialchars((string) __('patient.tax'), ENT_QUOTES, 'UTF-8') ?></span><br><code><?= htmlspecialchars($patient['tax_code']) ?></code></div>
+            <div class="col-md-3"><span class="text-muted"><?= htmlspecialchars((string) __('patient.birth'), ENT_QUOTES, 'UTF-8') ?></span><br><?= htmlspecialchars($patient['birth_date']) ?></div>
+            <div class="col-md-3"><span class="text-muted"><?= htmlspecialchars((string) __('patient.gender'), ENT_QUOTES, 'UTF-8') ?></span><br><?= htmlspecialchars($genderLabel) ?></div>
+            <div class="col-md-3"><span class="text-muted"><?= htmlspecialchars((string) __('patient.last_h'), ENT_QUOTES, 'UTF-8') ?></span><br><?php
                 $lh = $patient['last_height_cm'] ?? null;
-                echo $lh !== null && $lh !== '' && is_numeric($lh) ? '<strong>' . htmlspecialchars(number_format((float) $lh, 2)) . '</strong>' : '<span class="text-muted">—</span>';
+                echo $lh !== null && $lh !== '' && is_numeric($lh) ? '<strong>' . htmlspecialchars(number_format((float) $lh, 2)) . '</strong>' : '<span class="text-muted">' . htmlspecialchars((string) __('common.dash'), ENT_QUOTES, 'UTF-8') . '</span>';
             ?></div>
-            <div class="col-md-3"><span class="text-muted">Last weight (kg)</span><br><?php
+            <div class="col-md-3"><span class="text-muted"><?= htmlspecialchars((string) __('patient.last_w'), ENT_QUOTES, 'UTF-8') ?></span><br><?php
                 $lw = $patient['last_weight_kg'] ?? null;
-                echo $lw !== null && $lw !== '' && is_numeric($lw) ? '<strong>' . htmlspecialchars(number_format((float) $lw, 2)) . '</strong>' : '<span class="text-muted">—</span>';
+                echo $lw !== null && $lw !== '' && is_numeric($lw) ? '<strong>' . htmlspecialchars(number_format((float) $lw, 2)) . '</strong>' : '<span class="text-muted">' . htmlspecialchars((string) __('common.dash'), ENT_QUOTES, 'UTF-8') . '</span>';
             ?></div>
         </div>
     </div>
@@ -259,7 +273,7 @@ sv_topbar(
 
 <div class="sv-card sv-filters mb-3">
     <div class="sv-card-header">
-        <i class="fa-solid fa-filter"></i> Report filters
+        <i class="fa-solid fa-filter"></i> <?= htmlspecialchars((string) __('patient.filter_title'), ENT_QUOTES, 'UTF-8') ?>
     </div>
     <div class="sv-card-body">
         <form method="get" action="patient.php" class="row g-2">
@@ -272,100 +286,100 @@ sv_topbar(
             <?php endif; ?>
 
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Status</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.status'), ENT_QUOTES, 'UTF-8') ?></label>
                 <select class="form-select" name="status">
-                    <option value="">All</option>
+                    <option value=""><?= htmlspecialchars((string) __('common.all'), ENT_QUOTES, 'UTF-8') ?></option>
                     <?php foreach ($allowedStatus as $st): ?>
-                        <option value="<?= htmlspecialchars($st) ?>"<?= $status === $st ? ' selected' : '' ?>><?= htmlspecialchars($st) ?></option>
+                        <option value="<?= htmlspecialchars($st) ?>"<?= $status === $st ? ' selected' : '' ?>><?= htmlspecialchars(sv_t_report_status($st)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Curve type</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.curve'), ENT_QUOTES, 'UTF-8') ?></label>
                 <select class="form-select" name="curve">
-                    <option value=""<?= $curve === '' ? ' selected' : '' ?>>All</option>
-                    <option value="C"<?= $curve === 'C' ? ' selected' : '' ?>>C (single)</option>
-                    <option value="S"<?= $curve === 'S' ? ' selected' : '' ?>>S (double)</option>
-                    <option value="unspecified"<?= $curve === 'unspecified' ? ' selected' : '' ?>>Not classified</option>
+                    <option value=""<?= $curve === '' ? ' selected' : '' ?>><?= htmlspecialchars((string) __('curve.filter_all'), ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="C"<?= $curve === 'C' ? ' selected' : '' ?>><?= htmlspecialchars((string) __('curve.opt_c'), ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="S"<?= $curve === 'S' ? ' selected' : '' ?>><?= htmlspecialchars((string) __('curve.opt_s'), ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="unspecified"<?= $curve === 'unspecified' ? ' selected' : '' ?>><?= htmlspecialchars((string) __('curve.opt_unspecified'), ENT_QUOTES, 'UTF-8') ?></option>
                 </select>
             </div>
 
             <div class="col-6 col-md-3 col-lg-1">
-                <label class="form-label">Report ID</label>
-                <input class="form-control" name="rid" value="<?= htmlspecialchars($ridExact) ?>" placeholder="exact" inputmode="numeric">
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.rid'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="rid" value="<?= htmlspecialchars($ridExact) ?>" placeholder="<?= htmlspecialchars((string) __('queue.rid_ph'), ENT_QUOTES, 'UTF-8') ?>" inputmode="numeric">
             </div>
             <div class="col-6 col-md-3 col-lg-1">
-                <label class="form-label">ID min</label>
-                <input class="form-control" name="rid_min" value="<?= $ridMin > 0 ? (int) $ridMin : '' ?>" placeholder="≥" inputmode="numeric">
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.rid_min'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="rid_min" value="<?= $ridMin > 0 ? (int) $ridMin : '' ?>" placeholder="<?= htmlspecialchars((string) __('queue.ph_min'), ENT_QUOTES, 'UTF-8') ?>" inputmode="numeric">
             </div>
             <div class="col-6 col-md-3 col-lg-1">
-                <label class="form-label">ID max</label>
-                <input class="form-control" name="rid_max" value="<?= $ridMax > 0 ? (int) $ridMax : '' ?>" placeholder="≤" inputmode="numeric">
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.rid_max'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="rid_max" value="<?= $ridMax > 0 ? (int) $ridMax : '' ?>" placeholder="<?= htmlspecialchars((string) __('queue.ph_max'), ENT_QUOTES, 'UTF-8') ?>" inputmode="numeric">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Thoracic ° min</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.tor_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="tor_min" value="<?= $torMin !== null ? htmlspecialchars((string) $torMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Thoracic ° max</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.tor_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="tor_max" value="<?= $torMax !== null ? htmlspecialchars((string) $torMax) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Lumbar ° min</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.lum_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="lum_min" value="<?= $lumMin !== null ? htmlspecialchars((string) $lumMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Lumbar ° max</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.lum_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="lum_max" value="<?= $lumMax !== null ? htmlspecialchars((string) $lumMax) : '' ?>" inputmode="decimal">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Max Cobb ° min</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.cobb_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="cobb_min" value="<?= $cobbMin !== null ? htmlspecialchars((string) $cobbMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Max Cobb ° max</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.cobb_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="cobb_max" value="<?= $cobbMax !== null ? htmlspecialchars((string) $cobbMax) : '' ?>" inputmode="decimal">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Height (cm) min</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.h_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="h_cm_min" value="<?= $hCmMin !== null ? htmlspecialchars((string) $hCmMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Height (cm) max</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.h_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="h_cm_max" value="<?= $hCmMax !== null ? htmlspecialchars((string) $hCmMax) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Weight (kg) min</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.w_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="w_kg_min" value="<?= $wKgMin !== null ? htmlspecialchars((string) $wKgMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Weight (kg) max</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.w_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="w_kg_max" value="<?= $wKgMax !== null ? htmlspecialchars((string) $wKgMax) : '' ?>" inputmode="decimal">
             </div>
 
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Created from</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.created_from'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="date" name="created_from" value="<?= htmlspecialchars($createdFrom) ?>">
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Created to</label>
+                <label class="form-label"><?= htmlspecialchars((string) __('queue.created_to'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="date" name="created_to" value="<?= htmlspecialchars($createdTo) ?>">
             </div>
 
             <div class="col-12 d-flex flex-wrap gap-2 align-items-end mt-2">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-magnifying-glass fa-fw"></i> Apply filters
+                    <i class="fa-solid fa-magnifying-glass fa-fw"></i> <?= htmlspecialchars((string) __('queue.apply'), ENT_QUOTES, 'UTF-8') ?>
                 </button>
                 <a href="<?= htmlspecialchars(sv_back_preserve_on('patient.php?id=' . (int) $id), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary">
-                    <i class="fa-solid fa-xmark fa-fw"></i> Clear
+                    <i class="fa-solid fa-xmark fa-fw"></i> <?= htmlspecialchars((string) __('queue.clear'), ENT_QUOTES, 'UTF-8') ?>
                 </a>
             </div>
         </form>
         <p class="text-muted small mb-0 mt-2">
-            <strong>Δ vs prior</strong> compares each report to the next-older exam (same patient).
+            <strong><?= htmlspecialchars((string) __('patient.delta_strong'), ENT_QUOTES, 'UTF-8') ?></strong> <?= htmlspecialchars((string) __('patient.delta_text'), ENT_QUOTES, 'UTF-8') ?>
         </p>
     </div>
 </div>
@@ -373,39 +387,40 @@ sv_topbar(
 <div class="sv-card">
     <div class="sv-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
         <span>
-            <i class="fa-solid fa-file-medical"></i> Reports
+            <i class="fa-solid fa-file-medical"></i> <?= htmlspecialchars((string) __('patient.reports'), ENT_QUOTES, 'UTF-8') ?>
             <span class="text-muted fw-normal">
-                (<?= (int) $totalReports ?> match<?= $totalReports > 0 ? ' · rows ' . (int) $from . '–' . (int) $to : '' ?> · newest first)
+                <?= htmlspecialchars($reportsLine, ENT_QUOTES, 'UTF-8') ?>
             </span>
         </span>
-        <span class="text-muted small">20 per page</span>
+        <span class="text-muted small"><?= htmlspecialchars((string) __('patient.per_page_n', ['n' => $perPage]), ENT_QUOTES, 'UTF-8') ?></span>
     </div>
     <div class="sv-card-body p-0">
         <div class="table-responsive">
             <table class="table table-striped mb-0 align-middle">
                 <thead>
                     <tr>
-                        <th>Report</th>
-                        <th>Created</th>
-                        <th>Status</th>
-                        <th>Curve</th>
-                        <th>Thoracic °</th>
-                        <th>Lumbar °</th>
-                        <th>Max Cobb</th>
-                        <th>Height</th>
-                        <th>Weight</th>
-                        <th>Δ H vs prior</th>
-                        <th>Δ W vs prior</th>
-                        <th>Error</th>
+                        <th><?= htmlspecialchars((string) __('patient.col_report'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_created'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_status'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_curve'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_tor'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_lum'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_max'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_h'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_w'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_dh'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_dw'), ENT_QUOTES, 'UTF-8') ?></th>
+                        <th><?= htmlspecialchars((string) __('patient.col_err'), ENT_QUOTES, 'UTF-8') ?></th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($reports as $ri => $r): ?>
-                    <?php
+                <?php
+                $dashCell = htmlspecialchars((string) __('common.dash'), ENT_QUOTES, 'UTF-8');
+                foreach ($reports as $ri => $r):
                     $older = $reports[$ri + 1] ?? null;
-                    $dh = '—';
-                    $dw = '—';
+                    $dh = $dashCell;
+                    $dw = $dashCell;
                     if ($older !== null) {
                         $ch = $r['height_cm'] ?? null;
                         $cw = $r['weight_kg'] ?? null;
@@ -413,31 +428,37 @@ sv_topbar(
                         $ow = $older['weight_kg'] ?? null;
                         if ($ch !== null && $ch !== '' && is_numeric($ch) && $oh !== null && $oh !== '' && is_numeric($oh)) {
                             $d = (float) $ch - (float) $oh;
-                            $dh = ($d > 0 ? '+' : '') . htmlspecialchars(number_format($d, 2)) . ' cm';
+                            $dh = ($d > 0 ? '+' : '') . htmlspecialchars(number_format($d, 2), ENT_QUOTES, 'UTF-8') . htmlspecialchars($uCm, ENT_QUOTES, 'UTF-8');
                         }
                         if ($cw !== null && $cw !== '' && is_numeric($cw) && $ow !== null && $ow !== '' && is_numeric($ow)) {
                             $d = (float) $cw - (float) $ow;
-                            $dw = ($d > 0 ? '+' : '') . htmlspecialchars(number_format($d, 2)) . ' kg';
+                            $dw = ($d > 0 ? '+' : '') . htmlspecialchars(number_format($d, 2), ENT_QUOTES, 'UTF-8') . htmlspecialchars($uKg, ENT_QUOTES, 'UTF-8');
                         }
                     }
-                    ?>
+                    $curveCell = (string) ($r['curve_type'] ?? '');
+                    if ($curveCell === '') {
+                        $curveOut = $dashCell;
+                    } else {
+                        $curveOut = htmlspecialchars(sv_t_curve_filter($curveCell), ENT_QUOTES, 'UTF-8');
+                    }
+                ?>
                     <tr>
                         <td><strong>#<?= (int) $r['id'] ?></strong></td>
                         <td><span class="text-muted"><?= htmlspecialchars((string) $r['created_at']) ?></span></td>
                         <td>
                             <span class="<?= sv_status_class($r['status']) ?>">
                                 <?= sv_status_icon_markup($r['status']) ?>
-                                <span class="sv-status-text"><?= htmlspecialchars($r['status']) ?></span>
+                                <span class="sv-status-text"><?= htmlspecialchars(sv_t_report_status((string) $r['status'])) ?></span>
                             </span>
                         </td>
-                        <td><?= htmlspecialchars($r['curve_type'] ?? '') ?></td>
+                        <td><?= $curveOut ?></td>
                         <td><?php
                             $v = $r['cobb_thoracic_deg'] ?? null;
-                            echo $v !== null && $v !== '' ? htmlspecialchars(number_format((float) $v, 2)) : '—';
+                            echo $v !== null && $v !== '' ? htmlspecialchars(number_format((float) $v, 2)) : $dashCell;
                         ?></td>
                         <td><?php
                             $v = $r['cobb_lumbar_deg'] ?? null;
-                            echo $v !== null && $v !== '' ? htmlspecialchars(number_format((float) $v, 2)) : '—';
+                            echo $v !== null && $v !== '' ? htmlspecialchars(number_format((float) $v, 2)) : $dashCell;
                         ?></td>
                         <td><?php
                             $reg = $r['cobb_max_region'] ?? '';
@@ -445,16 +466,16 @@ sv_topbar(
                             if ($mx !== null && $mx !== '') {
                                 echo htmlspecialchars(strtoupper((string) $reg) . ' ' . number_format((float) $mx, 2) . '°');
                             } else {
-                                echo '—';
+                                echo $dashCell;
                             }
                         ?></td>
                         <td><?php
                             $hc = $r['height_cm'] ?? null;
-                            echo $hc !== null && $hc !== '' ? htmlspecialchars(number_format((float) $hc, 2)) . ' cm' : '—';
+                            echo $hc !== null && $hc !== '' ? htmlspecialchars(number_format((float) $hc, 2)) . htmlspecialchars($uCm, ENT_QUOTES, 'UTF-8') : $dashCell;
                         ?></td>
                         <td><?php
                             $wk = $r['weight_kg'] ?? null;
-                            echo $wk !== null && $wk !== '' ? htmlspecialchars(number_format((float) $wk, 2)) . ' kg' : '—';
+                            echo $wk !== null && $wk !== '' ? htmlspecialchars(number_format((float) $wk, 2)) . htmlspecialchars($uKg, ENT_QUOTES, 'UTF-8') : $dashCell;
                         ?></td>
                         <td class="small"><?= $dh ?></td>
                         <td class="small"><?= $dw ?></td>
@@ -464,19 +485,23 @@ sv_topbar(
                         ?></td>
                         <td class="text-end">
                             <a href="<?= htmlspecialchars(sv_append_back('report.php?id=' . (int) $r['id']), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary btn-sm">
-                                <i class="fa-solid fa-eye fa-fw"></i> View
+                                <i class="fa-solid fa-eye fa-fw"></i> <?= htmlspecialchars((string) __('patient.view'), ENT_QUOTES, 'UTF-8') ?>
                             </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$reports): ?>
-                    <tr><td colspan="13" class="text-center text-muted py-4">No reports match these filters.</td></tr>
+                    <tr><td colspan="13" class="text-center text-muted py-4"><?= htmlspecialchars((string) __('patient.empty'), ENT_QUOTES, 'UTF-8') ?></td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
         </div>
         <div class="p-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <span class="text-muted small">Page <?= (int) $page ?> of <?= (int) $totalPages ?></span>
+            <span class="text-muted small"><?= htmlspecialchars(
+                (string) __('patient.page_of', ['page' => (int) $page, 'total' => (int) $totalPages]),
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?></span>
             <?php sv_render_pagination('patient.php', $page, $totalPages); ?>
         </div>
     </div>

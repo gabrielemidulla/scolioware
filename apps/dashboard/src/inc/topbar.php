@@ -24,7 +24,9 @@ function sv_topbar(array $breadcrumbs, string $headingInnerHtml, ?string $action
 {
     echo '<header class="sv-topbar">';
     if ($breadcrumbs !== []) {
-        echo '<nav class="sv-topbar-breadcrumb" aria-label="Breadcrumb"><ol class="breadcrumb sv-breadcrumb mb-0">';
+        echo '<nav class="sv-topbar-breadcrumb" aria-label="'
+            . htmlspecialchars((string) __('crumb.aria'), ENT_QUOTES, 'UTF-8')
+            . '"><ol class="breadcrumb sv-breadcrumb mb-0">';
         $n = count($breadcrumbs);
         foreach ($breadcrumbs as $i => $c) {
             $label = htmlspecialchars((string) ($c['label'] ?? ''), ENT_QUOTES, 'UTF-8');

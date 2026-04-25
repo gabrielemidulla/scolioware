@@ -198,6 +198,87 @@ pre {
   color: var(--sv-sidebar-fg-muted);
   border-top: 1px solid #15171a;
   background: #22262a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sv-locale-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.sv-locale-switcher .sv-locale-flag {
+  flex-shrink: 0;
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.sv-locale-select-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sv-locale-switcher .form-select {
+  font-size: 11px;
+  padding: 0.2rem 1.75rem 0.2rem 0.4rem;
+  line-height: 1.3;
+  background-color: #2b2f33;
+  border-color: #3a3f44;
+  color: var(--sv-sidebar-fg);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23adb5bd' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+}
+
+.sv-locale-switcher .form-select:focus {
+  border-color: var(--sv-primary-light);
+  box-shadow: 0 0 0 0.2rem rgba(15, 107, 107, 0.25);
+  color: #fff;
+}
+
+.sv-sidebar-user {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.35;
+}
+
+.sv-auth-locale {
+  max-width: 100%;
+}
+
+/* Login: language switcher fixed to bottom-right of the viewport (outside the card) */
+.sv-auth-locale-dock {
+  position: fixed;
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  z-index: 50;
+  max-width: min(100% - 2rem, 280px);
+  pointer-events: auto;
+}
+
+.sv-auth-locale .sv-locale-switcher .form-select,
+.sv-auth-locale-dock .sv-locale-switcher .form-select {
+  background-color: var(--sv-card-bg);
+  border-color: var(--sv-border);
+  color: var(--sv-text);
+  font-size: 12.5px;
+  padding: 0.3rem 1.75rem 0.3rem 0.5rem;
+}
+
+.sv-auth-locale-dock .sv-locale-switcher {
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--sv-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .sv-content {

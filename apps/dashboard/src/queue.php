@@ -217,26 +217,26 @@ if ($isQueueFragment) {
     exit;
 }
 
-sv_layout_start('Report queue');
+sv_layout_start(__('queue.title'));
 ob_start(); ?>
         <a href="new_report.php" class="btn btn-primary">
-            <i class="fa-solid fa-file-circle-plus fa-fw"></i> New report
+            <i class="fa-solid fa-file-circle-plus fa-fw"></i> <?= htmlspecialchars(__('queue.new_report'), ENT_QUOTES, 'UTF-8') ?>
         </a>
 <?php
 $topActions = ob_get_clean();
 sv_topbar(
     [
-        sv_crumb('Dashboard', 'index.php'),
-        sv_crumb('Report queue', null),
+        sv_crumb(__('crumb.dashboard'), 'index.php'),
+        sv_crumb(__('queue.title'), null),
     ],
-    '<i class="fa-solid fa-list-check"></i> Report queue',
+    '<i class="fa-solid fa-list-check"></i> ' . __('queue.title'),
     $topActions
 );
 ?>
 
 <div class="sv-card sv-filters mb-3">
     <div class="sv-card-header">
-        <i class="fa-solid fa-filter"></i> Filters
+        <i class="fa-solid fa-filter"></i> <?= htmlspecialchars(__('queue.filters'), ENT_QUOTES, 'UTF-8') ?>
     </div>
     <div class="sv-card-body">
         <form method="get" action="queue.php" class="row g-2">
@@ -248,9 +248,9 @@ sv_topbar(
             <?php endif; ?>
 
             <div class="col-md-4 col-lg-3">
-                <label class="form-label">Patient</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.patient'), ENT_QUOTES, 'UTF-8') ?></label>
                 <select class="form-select" name="patient_id">
-                    <option value="">All patients</option>
+                    <option value=""><?= htmlspecialchars(__('queue.all_patients'), ENT_QUOTES, 'UTF-8') ?></option>
                     <?php foreach ($allPatients as $p): ?>
                         <option value="<?= (int) $p['id'] ?>"<?= $patientId === (int) $p['id'] ? ' selected' : '' ?>>
                             <?= htmlspecialchars($p['last_name'] . ', ' . $p['first_name'] . ' (' . $p['tax_code'] . ')') ?>
@@ -259,99 +259,99 @@ sv_topbar(
                 </select>
             </div>
             <div class="col-md-4 col-lg-2">
-                <label class="form-label">Tax code contains</label>
-                <input class="form-control" name="tax" value="<?= htmlspecialchars($tax) ?>" placeholder="e.g. RSS" autocomplete="off">
+                <label class="form-label"><?= htmlspecialchars(__('queue.tax'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="tax" value="<?= htmlspecialchars($tax) ?>" placeholder="<?= htmlspecialchars(__('queue.tax_ph'), ENT_QUOTES, 'UTF-8') ?>" autocomplete="off">
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Status</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.status'), ENT_QUOTES, 'UTF-8') ?></label>
                 <select class="form-select" name="status">
-                    <option value="">All</option>
+                    <option value=""><?= htmlspecialchars(__('common.all'), ENT_QUOTES, 'UTF-8') ?></option>
                     <?php foreach ($allowedStatus as $st): ?>
-                        <option value="<?= htmlspecialchars($st) ?>"<?= $status === $st ? ' selected' : '' ?>><?= htmlspecialchars($st) ?></option>
+                        <option value="<?= htmlspecialchars($st) ?>"<?= $status === $st ? ' selected' : '' ?>><?= htmlspecialchars(sv_t_report_status($st)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Curve type</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.curve'), ENT_QUOTES, 'UTF-8') ?></label>
                 <select class="form-select" name="curve">
-                    <option value=""<?= $curve === '' ? ' selected' : '' ?>>All</option>
-                    <option value="C"<?= $curve === 'C' ? ' selected' : '' ?>>C (single)</option>
-                    <option value="S"<?= $curve === 'S' ? ' selected' : '' ?>>S (double)</option>
-                    <option value="unspecified"<?= $curve === 'unspecified' ? ' selected' : '' ?>>Not classified</option>
+                    <option value=""<?= $curve === '' ? ' selected' : '' ?>><?= htmlspecialchars(__('curve.filter_all'), ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="C"<?= $curve === 'C' ? ' selected' : '' ?>><?= htmlspecialchars(__('curve.opt_c'), ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="S"<?= $curve === 'S' ? ' selected' : '' ?>><?= htmlspecialchars(__('curve.opt_s'), ENT_QUOTES, 'UTF-8') ?></option>
+                    <option value="unspecified"<?= $curve === 'unspecified' ? ' selected' : '' ?>><?= htmlspecialchars(__('curve.opt_unspecified'), ENT_QUOTES, 'UTF-8') ?></option>
                 </select>
             </div>
 
             <div class="col-6 col-md-3 col-lg-1">
-                <label class="form-label">Report ID</label>
-                <input class="form-control" name="rid" value="<?= htmlspecialchars($ridExact) ?>" placeholder="exact" inputmode="numeric">
+                <label class="form-label"><?= htmlspecialchars(__('queue.rid'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="rid" value="<?= htmlspecialchars($ridExact) ?>" placeholder="<?= htmlspecialchars(__('queue.rid_ph'), ENT_QUOTES, 'UTF-8') ?>" inputmode="numeric">
             </div>
             <div class="col-6 col-md-3 col-lg-1">
-                <label class="form-label">ID min</label>
-                <input class="form-control" name="rid_min" value="<?= $ridMin > 0 ? (int) $ridMin : '' ?>" placeholder="≥" inputmode="numeric">
+                <label class="form-label"><?= htmlspecialchars(__('queue.rid_min'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="rid_min" value="<?= $ridMin > 0 ? (int) $ridMin : '' ?>" placeholder="<?= htmlspecialchars(__('queue.ph_min'), ENT_QUOTES, 'UTF-8') ?>" inputmode="numeric">
             </div>
             <div class="col-6 col-md-3 col-lg-1">
-                <label class="form-label">ID max</label>
-                <input class="form-control" name="rid_max" value="<?= $ridMax > 0 ? (int) $ridMax : '' ?>" placeholder="≤" inputmode="numeric">
+                <label class="form-label"><?= htmlspecialchars(__('queue.rid_max'), ENT_QUOTES, 'UTF-8') ?></label>
+                <input class="form-control" name="rid_max" value="<?= $ridMax > 0 ? (int) $ridMax : '' ?>" placeholder="<?= htmlspecialchars(__('queue.ph_max'), ENT_QUOTES, 'UTF-8') ?>" inputmode="numeric">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Thoracic ° min</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.tor_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="tor_min" value="<?= $torMin !== null ? htmlspecialchars((string) $torMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Thoracic ° max</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.tor_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="tor_max" value="<?= $torMax !== null ? htmlspecialchars((string) $torMax) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Lumbar ° min</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.lum_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="lum_min" value="<?= $lumMin !== null ? htmlspecialchars((string) $lumMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Lumbar ° max</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.lum_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="lum_max" value="<?= $lumMax !== null ? htmlspecialchars((string) $lumMax) : '' ?>" inputmode="decimal">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Max Cobb ° min</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.cobb_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="cobb_min" value="<?= $cobbMin !== null ? htmlspecialchars((string) $cobbMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Max Cobb ° max</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.cobb_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="cobb_max" value="<?= $cobbMax !== null ? htmlspecialchars((string) $cobbMax) : '' ?>" inputmode="decimal">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Height (cm) min</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.h_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="h_cm_min" value="<?= $hCmMin !== null ? htmlspecialchars((string) $hCmMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Height (cm) max</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.h_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="h_cm_max" value="<?= $hCmMax !== null ? htmlspecialchars((string) $hCmMax) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Weight (kg) min</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.w_min'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="w_kg_min" value="<?= $wKgMin !== null ? htmlspecialchars((string) $wKgMin) : '' ?>" inputmode="decimal">
             </div>
             <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Weight (kg) max</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.w_max'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" name="w_kg_max" value="<?= $wKgMax !== null ? htmlspecialchars((string) $wKgMax) : '' ?>" inputmode="decimal">
             </div>
 
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Created from</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.created_from'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="date" name="created_from" value="<?= htmlspecialchars($createdFrom) ?>">
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Created to</label>
+                <label class="form-label"><?= htmlspecialchars(__('queue.created_to'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="date" name="created_to" value="<?= htmlspecialchars($createdTo) ?>">
             </div>
 
             <div class="col-12 d-flex flex-wrap gap-2 align-items-end mt-2">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-magnifying-glass fa-fw"></i> Apply filters
+                    <i class="fa-solid fa-magnifying-glass fa-fw"></i> <?= htmlspecialchars(__('queue.apply'), ENT_QUOTES, 'UTF-8') ?>
                 </button>
                 <a href="<?= htmlspecialchars(sv_back_preserve_on('queue.php'), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary">
-                    <i class="fa-solid fa-xmark fa-fw"></i> Clear
+                    <i class="fa-solid fa-xmark fa-fw"></i> <?= htmlspecialchars(__('queue.clear'), ENT_QUOTES, 'UTF-8') ?>
                 </a>
             </div>
         </form>

@@ -18,26 +18,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new2 = (string) ($_POST['new_password_confirm'] ?? '');
 
     if (!password_verify($current, $user['password_hash'])) {
-        $error = 'Current password is incorrect.';
+        $error = __('account.error_current');
     } elseif ($new1 !== $new2) {
-        $error = 'New passwords do not match.';
+        $error = __('account.error_mismatch');
     } elseif (($pwErr = sv_validate_password($new1)) !== null) {
         $error = $pwErr;
     } else {
         sv_set_password((int) $user['id'], $new1);
-        $success = 'Password updated.';
+        $success = __('account.success');
         $user = sv_find_physician((int) $user['id']);
     }
 }
 
 $csrf = sv_csrf_token();
-sv_layout_start('Change password');
+sv_layout_start(__('account.title'));
 sv_topbar(
     [
-        sv_crumb('Dashboard', 'index.php'),
-        sv_crumb('Change password', null),
+        sv_crumb(__('crumb.dashboard'), 'index.php'),
+        sv_crumb(__('account.title'), null),
     ],
-    '<i class="fa-solid fa-key"></i> Change password',
+    '<i class="fa-solid fa-key"></i> ' . __('account.title'),
     null
 );
 ?>
@@ -46,7 +46,7 @@ sv_topbar(
     <div class="sv-card-header">
         <i class="fa-solid fa-user-doctor"></i> <?= htmlspecialchars($user['username']) ?>
         <?php if ((int) $user['is_admin'] === 1): ?>
-            <span class="text-warning small">(admin)</span>
+            <span class="text-warning small"><?= htmlspecialchars(__('nav.admin_badge'), ENT_QUOTES, 'UTF-8') ?></span>
         <?php endif; ?>
     </div>
     <div class="sv-card-body">
@@ -59,23 +59,23 @@ sv_topbar(
         <form method="post" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <div class="mb-3">
-                <label class="form-label">Current password</label>
+                <label class="form-label"><?= htmlspecialchars(__('account.label_current'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="password" name="current_password" required
                        autocomplete="current-password">
             </div>
             <div class="mb-3">
-                <label class="form-label">New password</label>
+                <label class="form-label"><?= htmlspecialchars(__('account.label_new'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="password" name="new_password" required
                        minlength="<?= SV_MIN_PASSWORD_LEN ?>" autocomplete="new-password">
-                <div class="form-text">Minimum <?= SV_MIN_PASSWORD_LEN ?> characters.</div>
+                <div class="form-text"><?= htmlspecialchars(__('account.min_help', ['min' => (string) SV_MIN_PASSWORD_LEN]), ENT_QUOTES, 'UTF-8') ?></div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Confirm new password</label>
+                <label class="form-label"><?= htmlspecialchars(__('account.label_confirm'), ENT_QUOTES, 'UTF-8') ?></label>
                 <input class="form-control" type="password" name="new_password_confirm" required
                        minlength="<?= SV_MIN_PASSWORD_LEN ?>" autocomplete="new-password">
             </div>
             <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk fa-fw"></i> Update password
+                <i class="fa-solid fa-floppy-disk fa-fw"></i> <?= htmlspecialchars(__('account.submit'), ENT_QUOTES, 'UTF-8') ?>
             </button>
         </form>
     </div>

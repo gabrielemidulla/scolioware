@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
 
             if (!preg_match('/^[a-z0-9_.-]{3,64}$/', $username)) {
-                throw new RuntimeException('Username must be 3–64 chars: lowercase letters, digits, _ . -');
+                throw new RuntimeException(__('physicians.err_user'));
             }
             if (($pwErr = sv_validate_password($password)) !== null) {
                 throw new RuntimeException($pwErr);
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             $stmt->execute([$username]);
             if ((int) $stmt->fetchColumn() > 0) {
-                throw new RuntimeException('Username already in use.');
+                throw new RuntimeException(__('physicians.err_in_use'));
             }
 
             $hash = password_hash($password, PASSWORD_BCRYPT);
@@ -46,19 +46,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             $stmt->execute([$username, $hash, $isAdmin, $display !== '' ? $display : null]);
 
-            $flash = 'Created physician "' . $username . '".';
+            $flash = __('physicians.ok_created', ['name' => $username]);
             $flashType = 'success';
         } elseif ($action === 'delete') {
             $id = (int) ($_POST['id'] ?? 0);
             if ($id <= 0) {
-                throw new RuntimeException('Missing physician id.');
+                throw new RuntimeException(__('physicians.err_id'));
             }
             if ($id === (int) $admin['id']) {
-                throw new RuntimeException('You cannot delete your own account.');
+                throw new RuntimeException(__('physicians.err_self_del'));
             }
             $target = sv_find_physician($id);
             if (!$target || $target['deleted_at'] !== null) {
-                throw new RuntimeException('Physician not found.');
+                throw new RuntimeException(__('physicians.err_not_found'));
             }
             if ((int) $target['is_admin'] === 1) {
                 $remaining = (int) $pdo->query(
@@ -66,43 +66,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      WHERE deleted_at IS NULL AND is_admin = 1'
                 )->fetchColumn();
                 if ($remaining <= 1) {
-                    throw new RuntimeException('Cannot delete the last remaining admin.');
+                    throw new RuntimeException(__('physicians.err_last_admin'));
                 }
             }
             $stmt = $pdo->prepare(
                 'UPDATE physicians SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?'
             );
             $stmt->execute([$id]);
-            $flash = 'Physician "' . $target['username'] . '" was soft-deleted.';
+            $flash = __('physicians.ok_deleted', ['name' => (string) $target['username']]);
             $flashType = 'success';
         } elseif ($action === 'restore') {
             $id = (int) ($_POST['id'] ?? 0);
             $target = sv_find_physician($id);
             if (!$target) {
-                throw new RuntimeException('Physician not found.');
+                throw new RuntimeException(__('physicians.err_not_found'));
             }
             if ($target['deleted_at'] === null) {
-                throw new RuntimeException('Physician is not deleted.');
+                throw new RuntimeException(__('physicians.err_not_deleted'));
             }
             $clash = $pdo->prepare(
                 'SELECT id FROM physicians WHERE username = ? AND deleted_at IS NULL LIMIT 1'
             );
             $clash->execute([$target['username']]);
             if ($clash->fetch()) {
-                throw new RuntimeException('Cannot restore: username "' . $target['username'] . '" is already taken by an active physician.');
+                throw new RuntimeException(
+                    __('physicians.err_restore', ['name' => (string) $target['username']])
+                );
             }
             $stmt = $pdo->prepare('UPDATE physicians SET deleted_at = NULL WHERE id = ?');
             $stmt->execute([$id]);
-            $flash = 'Physician "' . $target['username'] . '" was restored.';
+            $flash = __('physicians.ok_restored', ['name' => (string) $target['username']]);
             $flashType = 'success';
         } elseif ($action === 'reset_link') {
             $id = (int) ($_POST['id'] ?? 0);
             if ($id === (int) $admin['id']) {
-                throw new RuntimeException('You cannot generate a reset link for your own account.');
+                throw new RuntimeException(__('physicians.err_reset_self'));
             }
             $target = sv_find_physician($id);
             if (!$target || $target['deleted_at'] !== null) {
-                throw new RuntimeException('Physician not found.');
+                throw new RuntimeException(__('physicians.err_not_found'));
             }
             $token = sv_create_reset_token((int) $target['id'], (int) $admin['id']);
             $generatedReset = [
@@ -110,10 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'url' => sv_reset_link($token),
                 'ttl_hours' => SV_TOKEN_TTL_HOURS,
             ];
-            $flash = 'Reset link generated for "' . $target['username'] . '". Copy and send it to the physician.';
+            $flash = __('physicians.ok_reset', ['name' => (string) $target['username']]);
             $flashType = 'success';
         } else {
-            throw new RuntimeException('Unknown action.');
+            throw new RuntimeException(__('physicians.err_unknown'));
         }
     } catch (Throwable $e) {
         $flash = $e->getMessage();
@@ -128,13 +130,13 @@ $rows = $pdo->query(
 )->fetchAll();
 
 $csrf = sv_csrf_token();
-sv_layout_start('Physicians');
+sv_layout_start(__('physicians.title'));
 sv_topbar(
     [
-        sv_crumb('Dashboard', 'index.php'),
-        sv_crumb('Physicians', null),
+        sv_crumb(__('nav.dashboard'), 'index.php'),
+        sv_crumb(__('physicians.title'), null),
     ],
-    '<i class="fa-solid fa-user-doctor"></i> Physicians',
+    '<i class="fa-solid fa-user-doctor"></i> ' . htmlspecialchars((string) __('physicians.title'), ENT_QUOTES, 'UTF-8'),
     null
 );
 ?>
@@ -148,19 +150,27 @@ sv_topbar(
 <?php if ($generatedReset !== null): ?>
     <div class="sv-card mb-3">
         <div class="sv-card-header">
-            <i class="fa-solid fa-link"></i> Reset link for "<?= htmlspecialchars($generatedReset['username']) ?>"
+            <i class="fa-solid fa-link"></i> <?= htmlspecialchars(
+                (string) __('physicians.reset_link_title', ['name' => (string) $generatedReset['username']]),
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?>
         </div>
         <div class="sv-card-body">
             <p class="mb-2 text-muted small">
-                Send this URL to the physician. It expires in <?= (int) $generatedReset['ttl_hours'] ?> hours and can be used only once.
+                <?= htmlspecialchars(
+                    (string) __('physicians.reset_send', ['hours' => (int) $generatedReset['ttl_hours']]),
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>
             </p>
             <div class="input-group">
                 <input type="text" class="form-control" value="<?= htmlspecialchars($generatedReset['url']) ?>" id="reset_url" readonly>
-                <button class="btn btn-secondary" type="button" onclick="
-                    var i = document.getElementById('reset_url'); i.select(); i.setSelectionRange(0, 99999);
-                    navigator.clipboard.writeText(i.value).then(function(){ this.textContent='Copied'; }.bind(this));
-                ">
-                    <i class="fa-solid fa-copy"></i> Copy
+                <button class="btn btn-secondary" type="button" data-copied-lbl="<?= htmlspecialchars((string) __('physicians.copied'), ENT_QUOTES, 'UTF-8') ?>"
+                    onclick="var b=this;var i=document.getElementById('reset_url');i.select();i.setSelectionRange(0,99999);
+                    navigator.clipboard.writeText(i.value).then(function(){var s=b.querySelector('.js-copy-lbl');if(s)s.textContent=b.getAttribute('data-copied-lbl');});"
+                >
+                    <i class="fa-solid fa-copy"></i> <span class="js-copy-lbl"><?= htmlspecialchars((string) __('physicians.copy'), ENT_QUOTES, 'UTF-8') ?></span>
                 </button>
             </div>
         </div>
@@ -171,33 +181,37 @@ sv_topbar(
     <div class="col-lg-4">
         <div class="sv-card">
             <div class="sv-card-header">
-                <i class="fa-solid fa-user-plus"></i> Create physician
+                <i class="fa-solid fa-user-plus"></i> <?= htmlspecialchars((string) __('physicians.create'), ENT_QUOTES, 'UTF-8') ?>
             </div>
             <div class="sv-card-body">
                 <form method="post" autocomplete="off">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                     <input type="hidden" name="action" value="create">
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
+                        <label class="form-label"><?= htmlspecialchars((string) __('physicians.label_user'), ENT_QUOTES, 'UTF-8') ?></label>
                         <input class="form-control" name="username" required maxlength="64"
-                               pattern="[a-zA-Z0-9_.\-]{3,64}" placeholder="lowercase, 3–64 chars">
+                               pattern="[a-zA-Z0-9_.\-]{3,64}" placeholder="lowercase, 3–64">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Display name (optional)</label>
+                        <label class="form-label"><?= htmlspecialchars((string) __('physicians.label_display'), ENT_QUOTES, 'UTF-8') ?></label>
                         <input class="form-control" name="display_name" maxlength="191">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Initial password</label>
+                        <label class="form-label"><?= htmlspecialchars((string) __('physicians.label_pass'), ENT_QUOTES, 'UTF-8') ?></label>
                         <input class="form-control" type="password" name="password" required
                                minlength="<?= SV_MIN_PASSWORD_LEN ?>">
-                        <div class="form-text">Minimum <?= SV_MIN_PASSWORD_LEN ?> characters. The physician can change it later.</div>
+                        <div class="form-text"><?= htmlspecialchars(
+                            (string) __('physicians.hint_pass', ['min' => SV_MIN_PASSWORD_LEN]),
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?></div>
                     </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin" value="1">
-                        <label class="form-check-label" for="is_admin">Admin</label>
+                        <label class="form-check-label" for="is_admin"><?= htmlspecialchars((string) __('physicians.admin'), ENT_QUOTES, 'UTF-8') ?></label>
                     </div>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fa-solid fa-floppy-disk fa-fw"></i> Create
+                        <i class="fa-solid fa-floppy-disk fa-fw"></i> <?= htmlspecialchars((string) __('physicians.create_btn'), ENT_QUOTES, 'UTF-8') ?>
                     </button>
                 </form>
             </div>
@@ -207,7 +221,7 @@ sv_topbar(
     <div class="col-lg-8">
         <div class="sv-card">
             <div class="sv-card-header">
-                <i class="fa-solid fa-list"></i> All physicians
+                <i class="fa-solid fa-list"></i> <?= htmlspecialchars((string) __('physicians.list'), ENT_QUOTES, 'UTF-8') ?>
                 <span class="text-muted fw-normal">(<?= count($rows) ?>)</span>
             </div>
             <div class="sv-card-body p-0">
@@ -215,12 +229,12 @@ sv_topbar(
                     <table class="table table-striped mb-0 align-middle">
                         <thead>
                             <tr>
-                                <th>Username</th>
-                                <th>Display name</th>
-                                <th>Role</th>
-                                <th>Created</th>
-                                <th>State</th>
-                                <th class="text-end">Actions</th>
+                                <th><?= htmlspecialchars((string) __('physicians.col_user'), ENT_QUOTES, 'UTF-8') ?></th>
+                                <th><?= htmlspecialchars((string) __('physicians.col_display'), ENT_QUOTES, 'UTF-8') ?></th>
+                                <th><?= htmlspecialchars((string) __('physicians.col_role'), ENT_QUOTES, 'UTF-8') ?></th>
+                                <th><?= htmlspecialchars((string) __('physicians.col_created'), ENT_QUOTES, 'UTF-8') ?></th>
+                                <th><?= htmlspecialchars((string) __('physicians.col_state'), ENT_QUOTES, 'UTF-8') ?></th>
+                                <th class="text-end"><?= htmlspecialchars((string) __('physicians.col_actions'), ENT_QUOTES, 'UTF-8') ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -233,18 +247,23 @@ sv_topbar(
                                 <td>
                                     <code><?= htmlspecialchars($r['username']) ?></code>
                                     <?php if ($isSelf): ?>
-                                        <span class="badge text-bg-secondary ms-1">you</span>
+                                        <span class="badge text-bg-secondary ms-1"><?= htmlspecialchars((string) __('physicians.you'), ENT_QUOTES, 'UTF-8') ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= htmlspecialchars((string) ($r['display_name'] ?? '—')) ?></td>
+                                <td><?php
+                                    $dn = (string) ($r['display_name'] ?? '');
+                                    echo $dn === ''
+                                        ? htmlspecialchars((string) __('common.dash'), ENT_QUOTES, 'UTF-8')
+                                        : htmlspecialchars($dn);
+                                ?></td>
                                 <td>
                                     <?php if ((int) $r['is_admin'] === 1): ?>
                                         <span class="sv-status sv-status-completed">
                                             <i class="fa-solid fa-user-shield sv-status-icon"></i>
-                                            <span class="sv-status-text">admin</span>
+                                            <span class="sv-status-text"><?= htmlspecialchars((string) __('physicians.role_admin'), ENT_QUOTES, 'UTF-8') ?></span>
                                         </span>
                                     <?php else: ?>
-                                        <span class="text-muted">physician</span>
+                                        <span class="text-muted"><?= htmlspecialchars((string) __('physicians.role_md'), ENT_QUOTES, 'UTF-8') ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td><span class="text-muted small"><?= htmlspecialchars((string) $r['created_at']) ?></span></td>
@@ -252,12 +271,12 @@ sv_topbar(
                                     <?php if ($isDeleted): ?>
                                         <span class="sv-status sv-status-failed">
                                             <i class="fa-solid fa-trash sv-status-icon"></i>
-                                            <span class="sv-status-text">deleted</span>
+                                            <span class="sv-status-text"><?= htmlspecialchars((string) __('physicians.state_del'), ENT_QUOTES, 'UTF-8') ?></span>
                                         </span>
                                     <?php else: ?>
                                         <span class="sv-status sv-status-completed">
                                             <i class="fa-solid fa-circle-check sv-status-icon"></i>
-                                            <span class="sv-status-text">active</span>
+                                            <span class="sv-status-text"><?= htmlspecialchars((string) __('physicians.state_active'), ENT_QUOTES, 'UTF-8') ?></span>
                                         </span>
                                     <?php endif; ?>
                                 </td>
@@ -269,17 +288,20 @@ sv_topbar(
                                             <input type="hidden" name="action" value="reset_link">
                                             <input type="hidden" name="id" value="<?= $rid ?>">
                                             <button class="btn btn-secondary btn-sm" type="submit"
-                                                    title="Generate one-time reset link">
-                                                <i class="fa-solid fa-link"></i> Reset link
+                                                    title="<?= htmlspecialchars((string) __('physicians.reset_title'), ENT_QUOTES, 'UTF-8') ?>">
+                                                <i class="fa-solid fa-link"></i> <?= htmlspecialchars((string) __('physicians.reset'), ENT_QUOTES, 'UTF-8') ?>
                                             </button>
                                         </form>
                                         <form method="post" class="d-inline"
-                                              onsubmit="return confirm('Soft-delete &quot;<?= htmlspecialchars($r['username']) ?>&quot;?');">
+                                              onsubmit="return confirm(<?= json_encode(
+                                                  (string) __('physicians.confirm_delete', ['name' => (string) $r['username']]),
+                                                  JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+                                              ) ?>);">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= $rid ?>">
                                             <button class="btn btn-secondary btn-sm" type="submit">
-                                                <i class="fa-solid fa-trash"></i> Delete
+                                                <i class="fa-solid fa-trash"></i> <?= htmlspecialchars((string) __('physicians.delete'), ENT_QUOTES, 'UTF-8') ?>
                                             </button>
                                         </form>
                                         <?php endif; ?>
@@ -289,7 +311,7 @@ sv_topbar(
                                             <input type="hidden" name="action" value="restore">
                                             <input type="hidden" name="id" value="<?= $rid ?>">
                                             <button class="btn btn-secondary btn-sm" type="submit">
-                                                <i class="fa-solid fa-rotate-left"></i> Restore
+                                                <i class="fa-solid fa-rotate-left"></i> <?= htmlspecialchars((string) __('physicians.restore'), ENT_QUOTES, 'UTF-8') ?>
                                             </button>
                                         </form>
                                     <?php endif; ?>

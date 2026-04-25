@@ -39,8 +39,15 @@ function sv_csrf_check(): void
     $tok = $_POST['csrf_token'] ?? '';
     if (!is_string($tok) || $tok === '' || empty($_SESSION['csrf_token'])
         || !hash_equals($_SESSION['csrf_token'], $tok)) {
+        if (!function_exists('__')) {
+            require_once __DIR__ . '/Locale.php';
+            Locale::init();
+        }
         http_response_code(403);
-        echo 'Invalid CSRF token. <a href="' . htmlspecialchars(sv_current_url()) . '">Reload</a> and try again.';
+        echo htmlspecialchars(__('error.csrf'), ENT_QUOTES, 'UTF-8')
+            . ' <a href="' . htmlspecialchars(sv_current_url()) . '">'
+            . htmlspecialchars(__('error.csrf_reload'), ENT_QUOTES, 'UTF-8')
+            . '</a>.';
         exit;
     }
 }
@@ -152,8 +159,12 @@ function sv_require_admin(): array
 {
     $u = sv_require_auth();
     if ((int) $u['is_admin'] !== 1) {
+        if (!function_exists('__')) {
+            require_once __DIR__ . '/Locale.php';
+            Locale::init();
+        }
         http_response_code(403);
-        echo 'Forbidden — admin only.';
+        echo htmlspecialchars(__('error.forbidden_admin'), ENT_QUOTES, 'UTF-8');
         exit;
     }
     return $u;
@@ -215,7 +226,11 @@ function sv_mark_reset_token_used(int $tokenId): void
 function sv_validate_password(string $pw): ?string
 {
     if (strlen($pw) < SV_MIN_PASSWORD_LEN) {
-        return 'Password must be at least ' . SV_MIN_PASSWORD_LEN . ' characters.';
+        if (!function_exists('__')) {
+            require_once __DIR__ . '/Locale.php';
+            Locale::init();
+        }
+        return __('auth.password_min', ['min' => (string) SV_MIN_PASSWORD_LEN]);
     }
     return null;
 }
