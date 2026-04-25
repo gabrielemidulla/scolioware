@@ -789,7 +789,9 @@ pre {
       rgba(0, 0, 0, 0.45) 100%
     ),
     url("img/bg.webp");
-  background-position: center;
+  background-position:
+    center,
+    calc(50% + 90px) center;
   background-size: cover;
   background-repeat: no-repeat;
 }
