@@ -1,0 +1,166 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'patients.title'|trans }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'patients.title'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-user-injured"></i> {{ 'patients.title'|trans }}
+{% endset %}
+
+{% block body %}
+{% set nd = 'common.dash'|trans %}
+{% if app.request.query.get('pat_deleted') == '1' %}
+    <div class="alert alert-success mb-3" role="alert">{{ 'patients.admin_patient_deleted'|trans }}</div>
+{% endif %}
+{% if create_flash %}
+    <div class="alert alert-{{ create_flash_type|e('html_attr') }} mb-3" role="alert">{{ create_flash|e }}</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="sw-card">
+            <div class="sw-card-header">
+                <i class="fa-solid fa-user-plus"></i> {{ 'patients.create'|trans }}
+            </div>
+            <div class="sw-card-body">
+                <form method="post" action="{{ path('patients') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                    <input type="hidden" name="create_patient" value="1">
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'patients.label_first'|trans }}</label>
+                        <input class="form-control" name="first_name" required maxlength="191">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'patients.label_surname'|trans }}</label>
+                        <input class="form-control" name="last_name" required maxlength="191">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'patients.label_tax'|trans }}</label>
+                        <input class="form-control" name="tax_code" required maxlength="32" style="text-transform: uppercase;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'patients.label_birth'|trans }}</label>
+                        <input class="form-control" type="date" name="birth_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'patients.label_gender'|trans }}</label>
+                        <select class="form-select" name="gender">
+                            <option value="male">{{ 'patients.gender_m'|trans }}</option>
+                            <option value="female">{{ 'patients.gender_f'|trans }}</option>
+                            <option value="non_binary">{{ 'patients.gender_nb'|trans }}</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk fa-fw"></i> {{ 'patients.save'|trans }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="sw-card sw-filters mb-3">
+            <div class="sw-card-header">
+                <i class="fa-solid fa-filter"></i> {{ 'patients.filter_vitals'|trans }}
+            </div>
+            <div class="sw-card-body">
+                <form method="get" action="{{ path('patients') }}" class="row g-2">
+                    <input type="hidden" name="page" value="1">
+                    {% if back_ok and back_raw is not null %}
+                        <input type="hidden" name="back" value="{{ back_raw|e('html_attr') }}">
+                    {% endif %}
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">{{ 'patients.ht_min'|trans }}</label>
+                        <input class="form-control" name="p_ht_min" value="{{ pHtMin is not null ? pHtMin : '' }}" inputmode="decimal">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">{{ 'patients.ht_max'|trans }}</label>
+                        <input class="form-control" name="p_ht_max" value="{{ pHtMax is not null ? pHtMax : '' }}" inputmode="decimal">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">{{ 'patients.wt_min'|trans }}</label>
+                        <input class="form-control" name="p_wt_min" value="{{ pWtMin is not null ? pWtMin : '' }}" inputmode="decimal">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label">{{ 'patients.wt_max'|trans }}</label>
+                        <input class="form-control" name="p_wt_max" value="{{ pWtMax is not null ? pWtMax : '' }}" inputmode="decimal">
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-magnifying-glass fa-fw"></i> {{ 'patients.apply'|trans }}
+                        </button>
+                        <a href="{{ back_preserve(path('patients')) }}" class="btn btn-secondary btn-sm">{{ 'patients.clear'|trans }}</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="sw-card">
+            <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span>
+                    <i class="fa-solid fa-list"></i> {{ 'patients.list'|trans }}
+                    <span class="text-muted fw-normal">
+                        ({{ totalPatients }} {{ 'patients.total'|trans }}{% if totalPatients > 0 %} · {{ from }}–{{ to }}{% endif %})
+                    </span>
+                </span>
+                <span class="text-muted small">{{ 'patients.per_page'|trans({'%n%': '10'}) }}</span>
+            </div>
+            <div class="sw-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>{{ 'patients.col_id'|trans }}</th>
+                                <th>{{ 'patients.col_name'|trans }}</th>
+                                <th>{{ 'patients.col_surname'|trans }}</th>
+                                <th>{{ 'patients.col_tax'|trans }}</th>
+                                <th>{{ 'patients.col_birth'|trans }}</th>
+                                <th>{{ 'patients.col_gender'|trans }}</th>
+                                <th>{{ 'patients.col_h'|trans }}</th>
+                                <th>{{ 'patients.col_w'|trans }}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for r in rows %}
+                            <tr>
+                                <td>{{ r.id }}</td>
+                                <td>{{ r.first_name|e }}</td>
+                                <td>{{ r.last_name|e }}</td>
+                                <td><code>{{ r.tax_code|e }}</code></td>
+                                <td>{{ r.birth_date|e }}</td>
+                                <td>{{ ('gender.' ~ r.gender)|trans }}</td>
+                                <td>{% if r.last_height_cm is not null and r.last_height_cm != '' %}{{ r.last_height_cm|number_format(2) }}{% else %}{{ nd }}{% endif %}</td>
+                                <td>{% if r.last_weight_kg is not null and r.last_weight_kg != '' %}{{ r.last_weight_kg|number_format(2) }}{% else %}{{ nd }}{% endif %}</td>
+                                <td class="text-end">
+                                    <a href="{{ back_append(path('patient', {id: r.id})) }}" class="btn btn-secondary btn-sm">
+                                        <i class="fa-solid fa-file-medical fa-fw"></i> {{ 'patients.reports'|trans }}
+                                    </a>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="9" class="text-center text-muted py-4">
+                                {% set noF = pHtMin is null and pHtMax is null and pWtMin is null and pWtMax is null %}
+                                {{ (totalPatients == 0 and noF ? 'patients.no_data' : 'patients.no_filter')|trans }}
+                            </td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="text-muted small">{{ 'patients.page'|trans({'%cur%': page, '%max%': totalPages}) }}</span>
+                    {% include 'partials/pagination.html.twig' with {
+                        route: 'patients',
+                        page: page,
+                        total_pages: totalPages,
+                        query: pagination_query,
+                        page_param: 'page'
+                    } only %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Same autodetection as run.sh; delegates to scripts/{mps|nvidia|amd|cpu}/build.sh
-# Override: SV_LLM_TARGET=cpu|nvidia|amd|mps
+# Delegates to scripts/<target>/build.sh (see detect-llm-target.sh).
 
 _SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/detect-llm-target.sh
 source "$_SCRIPTS_DIR/lib/detect-llm-target.sh"
 
-_target="$(sv_llm_target_print)" || exit 1
-if [[ -z "${SV_LLM_TARGET:-}" ]] && [[ -t 2 ]]; then
-  echo "LLM / compose profile: $_target  (set SV_LLM_TARGET=cpu|nvidia|amd|mps to override; see scripts/lib/detect-llm-target.sh)" >&2
+_target="$(sw_llm_target_print)" || exit 1
+if [[ -z "${SW_LLM_TARGET:-}" ]] && [[ -t 2 ]]; then
+  echo "LLM / compose profile: $_target  (set SW_LLM_TARGET=cpu|nvidia|amd|mps to override; see scripts/lib/detect-llm-target.sh)" >&2
 fi
 _child="$_SCRIPTS_DIR/$_target/build.sh"
 if [[ ! -f "$_child" ]]; then

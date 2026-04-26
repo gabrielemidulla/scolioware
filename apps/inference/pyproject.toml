@@ -2,7 +2,7 @@
 name = "scoliosoft-inference"
 version = "0.0.0"
 requires-python = ">=3.11"
-dependencies = []  # use requirements.txt in Docker; local dev: pip install -r requirements.txt
+dependencies = []
 
 [tool.ruff]
 target-version = "py311"
@@ -12,11 +12,14 @@ src = ["src", "tests", "main.py"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = [
-  "E402",  # dotenv before imports in main
-  "E501",  # long SQL / docstrings
-  "B008",  # FastAPI File/Form/Body defaults
-  "B905",  # zip without strict= (py311+)
+  "E402",
+  "E501",
+  "B008",
+  "B905",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["I001"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

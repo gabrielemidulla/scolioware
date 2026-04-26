@@ -1,14 +1,12 @@
 # shellcheck shell=bash
-# Used by ../run.sh and ../build.sh. Prints a single line: mps | nvidia | amd | cpu
-#
-# Optional override: SV_LLM_TARGET=cpu|nvidia|amd|mps (e.g. CI, or to force a profile)
+# Prints one of: mps | nvidia | amd | cpu. Override with SW_LLM_TARGET=...
 
-sv_llm_target_print() {
-  if [[ -n "${SV_LLM_TARGET:-}" ]]; then
-    case "$SV_LLM_TARGET" in
-    cpu|nvidia|amd|mps) echo "$SV_LLM_TARGET" ;;
+sw_llm_target_print() {
+  if [[ -n "${SW_LLM_TARGET:-}" ]]; then
+    case "$SW_LLM_TARGET" in
+    cpu|nvidia|amd|mps) echo "$SW_LLM_TARGET" ;;
     *)
-      echo "sv_llm_target: SV_LLM_TARGET must be one of: cpu, nvidia, amd, mps; got: ${SV_LLM_TARGET}" >&2
+      echo "sw_llm_target: SW_LLM_TARGET must be one of: cpu, nvidia, amd, mps; got: ${SW_LLM_TARGET}" >&2
       return 1
       ;;
     esac
@@ -22,9 +20,9 @@ sv_llm_target_print() {
   fi
 
   if [[ "$(uname -s)" == "Linux" ]]; then
-    if _sv_has_nvidia; then
+    if _sw_has_nvidia; then
       echo nvidia
-    elif _sv_has_amd_rocm; then
+    elif _sw_has_amd_rocm; then
       echo amd
     else
       echo cpu
@@ -36,11 +34,11 @@ sv_llm_target_print() {
   echo cpu
 }
 
-_sv_has_nvidia() {
+_sw_has_nvidia() {
   command -v nvidia-smi &>/dev/null && nvidia-smi -L &>/dev/null
 }
 
 # Standard ROCm / AMD: render driver exposes /dev/kfd. Matches our ollama:rocm compose.
-_sv_has_amd_rocm() {
+_sw_has_amd_rocm() {
   [[ -e /dev/kfd ]]
 }

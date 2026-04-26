@@ -9,6 +9,9 @@ RUN apt-get update \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" pdo pdo_mysql mysqli gd zip
 
+# Composer: run `composer install` in `apps/dashboard/src` (bind-mounted as /var/www/html in compose).
+RUN curl -fsSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
 # TCPDF is vendored at /usr/local/lib/tcpdf so the bind-mount on /var/www/html stays untouched.
 ARG TCPDF_VERSION=6.7.5
 RUN mkdir -p /usr/local/lib \
@@ -17,8 +20,14 @@ RUN mkdir -p /usr/local/lib \
     && mv "/usr/local/lib/TCPDF-${TCPDF_VERSION}" /usr/local/lib/tcpdf \
     && rm /tmp/tcpdf.tgz
 
-ENV SV_TCPDF_PATH=/usr/local/lib/tcpdf
+ENV SW_TCPDF_PATH=/usr/local/lib/tcpdf
 
 COPY infra/config/php/zz-pool.conf /usr/local/etc/php-fpm.d/zz-pool.conf
 
+COPY infra/docker/dashboard/docker-entrypoint.sh /usr/local/bin/sw-dashboard-entrypoint.sh
+RUN chmod +x /usr/local/bin/sw-dashboard-entrypoint.sh
+
 WORKDIR /var/www/html
+
+ENTRYPOINT ["/usr/local/bin/sw-dashboard-entrypoint.sh"]
+CMD ["php-fpm"]

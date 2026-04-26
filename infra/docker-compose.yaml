@@ -19,7 +19,7 @@ services:
       context: ..
       dockerfile: infra/docker/dashboard/Dockerfile
     env_file:
-      - .env
+      - ../apps/dashboard/src/.env
     volumes:
       - ../apps/dashboard/src:/var/www/html
       - ./config/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
@@ -31,7 +31,7 @@ services:
       MYSQL_PASSWORD: app_password
       INFERENCE_INTERNAL_URL: http://inference:8000
       # HTTP on port 8080: set 1 in production behind HTTPS
-      SV_COOKIE_SECURE: "0"
+      SW_COOKIE_SECURE: "0"
     depends_on:
       mysql:
         condition: service_healthy
@@ -109,9 +109,8 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/inference/Dockerfile
-    # Not published — use nginx at :8080 and dashboard /inference/ (session-protected) only.
     env_file:
-      - .env
+      - ../apps/inference/.env
     environment:
       MODEL_DIR: /app/models
       MYSQL_HOST: mysql
@@ -120,13 +119,13 @@ services:
       MYSQL_USER: app_user
       MYSQL_PASSWORD: app_password
       REDIS_URL: redis://redis:6379/0
-      # Default points at the in-compose `ollama` service. On macOS, override
-      # in .env to http://host.docker.internal:11434 and run `ollama serve`
-      # natively on the host so MedGemma uses Metal/MPS — Docker Desktop's VM
-      # cannot pass the Apple GPU through.
+      # Storage proxy: nginx :81 on the Docker network (see dashboard internal vhost).
+      DASHBOARD_STORAGE_URL: ${DASHBOARD_STORAGE_URL:-http://nginx:81}
+      # In-compose Ollama by default; on Mac use host Ollama + host.docker.internal (see Ollama section below).
       OLLAMA_INTERNAL_URL: ${OLLAMA_INTERNAL_URL:-http://ollama:11434}
     volumes:
       - ../apps/inference/models:/app/models
+      - ../apps/inference/src:/app/src:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -165,7 +164,7 @@ services:
       context: ..
       dockerfile: infra/docker/inference/Dockerfile
     env_file:
-      - .env
+      - ../apps/inference/.env
     environment:
       MODEL_DIR: /app/models
       MYSQL_HOST: mysql
@@ -174,9 +173,11 @@ services:
       MYSQL_USER: app_user
       MYSQL_PASSWORD: app_password
       REDIS_URL: redis://redis:6379/0
+      DASHBOARD_STORAGE_URL: ${DASHBOARD_STORAGE_URL:-http://nginx:81}
       OLLAMA_INTERNAL_URL: ${OLLAMA_INTERNAL_URL:-http://ollama:11434}
     volumes:
       - ../apps/inference/models:/app/models
+      - ../apps/inference/src:/app/src:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -184,11 +185,7 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-    # SimpleWorker (no fork-per-job) keeps the keypoint R-CNN model
-    # resident in memory across jobs. `worker_main.py` pre-warms the
-    # model so the very first job is also fast. We bypass the inference
-    # image entrypoint (which would launch uvicorn) and run the worker
-    # script directly instead.
+    # SimpleWorker + warm start in worker_main; no uvicorn entrypoint here.
     entrypoint: []
     working_dir: /app
     command: ["python", "-u", "worker_main.py"]
@@ -196,16 +193,13 @@ services:
     networks:
       - app-network
 
-  # Dedicated worker for the `sv_llm` queue (Ollama draft jobs).
-  # Lives separately from `inference-worker` so a long LLM call (30–120 s
-  # on CPU) cannot block the keypoint-RCNN scan pipeline. Reuses the same
-  # image; skips the torch warm step.
+  # LLM queue worker (same image as inference; no model warm-up).
   inference-worker-llm:
     build:
       context: ..
       dockerfile: infra/docker/inference/Dockerfile
     env_file:
-      - .env
+      - ../apps/inference/.env
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
@@ -213,6 +207,7 @@ services:
       MYSQL_USER: app_user
       MYSQL_PASSWORD: app_password
       REDIS_URL: redis://redis:6379/0
+      DASHBOARD_STORAGE_URL: ${DASHBOARD_STORAGE_URL:-http://nginx:81}
       OLLAMA_INTERNAL_URL: ${OLLAMA_INTERNAL_URL:-http://ollama:11434}
     depends_on:
       mysql:
@@ -228,38 +223,11 @@ services:
     networks:
       - app-network
 
-  # ---------------------------------------------------------------------------
-  # MedGemma 4B (Q4_K_M) for first-pass X-ray description.
-  # ---------------------------------------------------------------------------
-  # The LLM is opt-in: pick exactly ONE profile — prefer `../scripts/run.sh` (autodetects) or
-  # `../scripts/{cpu|nvidia|amd|mps}/run.sh` manually
-  # which export COMPOSE_PROFILES and OLLAMA_INTERNAL_URL for the compose process,
-  # or set COMPOSE_PROFILES in `.env` and pass `--profile` on the CLI:
-  #
-  #   cpu          Linux/Mac/Win, no GPU. ~3 GB RAM, ~30–120 s/draft.
-  #   gpu-nvidia   Linux host with NVIDIA driver + nvidia-container-toolkit.
-  #                Auto-offloads to VRAM (~3 GB), ~5–20 s/draft.
-  #   gpu-amd      Linux host with ROCm-supported AMD GPU + /dev/kfd, /dev/dri.
-  #                Uses the `ollama/ollama:rocm` image; ~5–25 s/draft.
-  #
-  # macOS / Apple Silicon (MPS): Docker Desktop's Linux VM cannot reach the
-  # Apple GPU. Run Ollama NATIVELY instead:
-  #
-  #     brew install ollama
-  #     ollama serve            # uses Metal/MPS automatically
-  #     ollama pull medgemma:4b
-  #
-  # ...then in `infra/.env` set:
-  #     OLLAMA_INTERNAL_URL=http://host.docker.internal:11434
-  # and DO NOT enable any of the ollama profiles below.
-  #
-  # All three variants share the network alias `ollama`, so the dashboard /
-  # inference services keep using `http://ollama:11434` regardless of which
-  # one is running.
-  # ---------------------------------------------------------------------------
+  # Optional in-docker Ollama (MedGemma etc.). Pick one profile: scripts/run.sh sets it, or
+  # `docker compose --profile cpu|gpu-nvidia|gpu-amd up`. Apple Silicon: run Ollama on the host,
+  # set OLLAMA_INTERNAL_URL=http://host.docker.internal:11434 in apps/inference/.env, skip these profiles.
+  # All variants publish the hostname `ollama` on the app network.
 
-  # YAML anchor with the bits every Ollama variant shares. The variants then
-  # `<<: *ollama-base` and only override what's hardware-specific.
   ollama-cpu: &ollama-base
     profiles: ["cpu"]
     image: ollama/ollama:latest
@@ -311,17 +279,12 @@ services:
     group_add:
       - video
 
-  # One-shot model puller. Runs after `ollama` is healthy, downloads the GGUF,
-  # then exits. Idempotent: re-running compose is a no-op once the blob is in
-  # the volume. Active for every in-compose Ollama profile (skipped on MPS,
-  # where you run `ollama pull` natively).
+  # Pulls OLLAMA_LLM_MODEL once the ollama-* service is up (in-docker profiles only).
   ollama-init:
     profiles: ["cpu", "gpu-nvidia", "gpu-amd"]
     image: ollama/ollama:latest
     restart: "no"
     depends_on:
-      # Compose only resolves the dependency that is actually selected by the
-      # active profile, so listing all three here is safe.
       ollama-cpu:
         condition: service_healthy
         required: false

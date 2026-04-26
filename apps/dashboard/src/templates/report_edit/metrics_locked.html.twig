@@ -1,0 +1,21 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'edit.cannot'|trans }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'report.title'|trans({'%id%': id}) },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-triangle-exclamation"></i> {{ 'edit.cannot'|trans }}
+{% endset %}
+{% set topbar_actions %}
+    <a href="{{ back_or('queue.php')|e('html_attr') }}" class="btn btn-secondary">{{ 'common.back'|trans }}</a>
+{% endset %}
+
+{% block body %}
+<div class="alert alert-warning">
+    {{ 'edit.warn'|trans({'%status%': status|e})|raw }}
+</div>
+<a href="{{ back_or('queue.php')|e('html_attr') }}" class="btn btn-secondary">{{ 'common.back'|trans }}</a>
+{% endblock %}

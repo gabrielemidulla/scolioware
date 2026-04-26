@@ -1,0 +1,40 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'index.title'|trans }}{% endblock %}
+
+{% set topbar_heading %}
+    <i class="fa-solid fa-gauge-high"></i> {{ 'index.title'|trans }}
+{% endset %}
+{% set topbar_actions %}
+    <a href="{{ path('new_report') }}" class="btn btn-primary">
+        <i class="fa-solid fa-file-circle-plus fa-fw"></i> {{ 'index.new_report_btn'|trans }}
+    </a>
+{% endset %}
+
+{% block body %}
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="sw-card">
+            <div class="sw-card-header">
+                <i class="fa-solid fa-database"></i> {{ 'index.db_card'|trans }}
+            </div>
+            <div class="sw-card-body">
+                {% if db_ok %}
+                    <p class="mb-0">
+                        <span class="sw-status sw-status-completed">
+                            <i class="fa-solid fa-circle-check"></i> {{ 'index.db_ok'|trans }}
+                        </span>
+                    </p>
+                {% else %}
+                    <p class="mb-2">
+                        <span class="sw-status sw-status-failed">
+                            <i class="fa-solid fa-triangle-exclamation"></i> {{ 'index.db_error'|trans }}
+                        </span>
+                    </p>
+                    <p class="mb-0 text-muted small">{{ 'index.db_error_detail'|trans }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

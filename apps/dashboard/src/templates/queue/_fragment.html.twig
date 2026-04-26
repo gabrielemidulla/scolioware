@@ -1,0 +1,90 @@
+{% set nd = 'common.dash'|trans %}
+{% set count_sub = totalReports ~ ' ' ~ (totalReports == 1 ? 'queue_table.match_s'|trans : 'queue_table.match_p'|trans) %}
+{% if totalReports > 0 %}
+    {% set count_sub = count_sub ~ ' · ' ~ 'queue_table.rows'|trans ~ ' ' ~ from ~ '–' ~ to %}
+{% endif %}
+<div class="sw-card">
+    <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fa-solid fa-table"></i> {{ 'queue_table.results'|trans }}
+            <span class="text-muted fw-normal">({{ count_sub }})</span>
+        </span>
+        <span class="text-muted small">{{ 'queue_table.per_page'|trans }}</span>
+    </div>
+    <div class="sw-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>{{ 'queue_table.col_id'|trans }}</th>
+                        <th>{{ 'queue_table.col_patient'|trans }}</th>
+                        <th>{{ 'queue_table.col_tax'|trans }}</th>
+                        <th>{{ 'queue_table.col_status'|trans }}</th>
+                        <th>{{ 'queue_table.col_curve'|trans }}</th>
+                        <th>{{ 'queue_table.col_tor'|trans }}</th>
+                        <th>{{ 'queue_table.col_lum'|trans }}</th>
+                        <th>{{ 'queue_table.col_max'|trans }}</th>
+                        <th>{{ 'queue_table.col_height'|trans }}</th>
+                        <th>{{ 'queue_table.col_weight'|trans }}</th>
+                        <th>{{ 'queue_table.col_created'|trans }}</th>
+                        <th>{{ 'queue_table.col_error'|trans }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in rows %}
+                    <tr>
+                        <td>#{{ r.id }}</td>
+                        <td>
+                            <a href="{{ back_append(path('patient', {id: r.patient_id})) }}">
+                                {{ r.first_name }} {{ r.last_name }}
+                            </a>
+                        </td>
+                        <td><code>{{ r.tax_code }}</code></td>
+                        <td>
+                            <span class="{{ sw_status_class(r.status) }}">
+                                {{ sw_status_icon_markup(r.status)|raw }}
+                                <span class="sw-status-text">{{ ('status.' ~ r.status)|trans }}</span>
+                            </span>
+                        </td>
+                        <td>{{ r.curve_type|default('') }}</td>
+                        <td>{% if r.cobb_thoracic_deg is not null and r.cobb_thoracic_deg != '' %}{{ r.cobb_thoracic_deg|number_format(2) }}{% else %}{{ nd }}{% endif %}</td>
+                        <td>{% if r.cobb_lumbar_deg is not null and r.cobb_lumbar_deg != '' %}{{ r.cobb_lumbar_deg|number_format(2) }}{% else %}{{ nd }}{% endif %}</td>
+                        <td>
+                            {% if r.cobb_max_deg is not null and r.cobb_max_deg != '' %}
+                                {{ (r.cobb_max_region|default('')|upper) ~ ' ' ~ (r.cobb_max_deg|number_format(2)) }}°
+                            {% else %}
+                                {{ nd }}
+                            {% endif %}
+                        </td>
+                        <td>{% if r.height_cm is not null and r.height_cm != '' %}{{ r.height_cm|number_format(2) }} cm{% else %}{{ nd }}{% endif %}</td>
+                        <td>{% if r.weight_kg is not null and r.weight_kg != '' %}{{ r.weight_kg|number_format(2) }} kg{% else %}{{ nd }}{% endif %}</td>
+                        <td><span class="text-muted">{{ r.created_at }}</span></td>
+                        <td>
+                            {% set err = r.error_message|default('') %}
+                            {{ err|length > 80 ? err|slice(0, 77) ~ '...' : err }}
+                        </td>
+                        <td>
+                            <a href="{{ back_append(path('report', {id: r.id})) }}" class="btn btn-secondary btn-sm">
+                                <i class="fa-solid fa-eye fa-fw"></i> {{ 'queue_table.view'|trans }}
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="13" class="text-center text-muted py-4">{{ 'queue_table.empty'|trans }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="p-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <span class="text-muted small">{{ 'patients.page'|trans({'%cur%': page, '%max%': totalPages}) }}</span>
+            {% include 'partials/pagination.html.twig' with {
+                route: 'queue',
+                page: page,
+                total_pages: totalPages,
+                query: pagination_query,
+                page_param: 'page'
+            } only %}
+        </div>
+    </div>
+</div>

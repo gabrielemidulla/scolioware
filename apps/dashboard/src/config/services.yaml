@@ -1,0 +1,19 @@
+parameters:
+
+services:
+    Doctrine\DBAL\Connection:
+        factory: ['@App\Infrastructure\DbalBootstrap', '__invoke']
+        lazy: true
+
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Exception/ApiJsonTerminator.php'
+            - '../src/Kernel.php'
+            - '../src/Locale/legacy_translation.php'
+            - '../src/Auth/legacy_auth.php'

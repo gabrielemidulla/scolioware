@@ -1,0 +1,126 @@
+{# Full app chrome (sidebar + main) for Twig pages. #}
+{% set nav = nav_route|default(app.request.attributes.get('_route')) %}
+<!DOCTYPE html>
+<html lang="{{ html_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block html_title %}{{ page_title|default('common.brand'|trans) }}{% endblock %} {{ 'common.brand_suffix'|trans }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+<div class="sw-layout">
+    <aside class="sw-sidebar">
+        <div class="sw-brand">
+            <img class="sw-brand-logo" src="assets/img/brand-scolioware-teal.svg" width="390" height="65" alt="{{ 'common.brand'|trans }}">
+        </div>
+        <ul class="sw-nav">
+            <li class="sw-nav-section">{{ 'nav.section.main'|trans }}</li>
+            <li>
+                <a href="{{ path('home_index') }}" class="{{ nav in ['home', 'home_index'] ? 'active' : '' }}">
+                    <i class="fa-solid fa-gauge-high fa-fw"></i>
+                    <span>{{ 'nav.dashboard'|trans }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ path('patients') }}" class="{{ nav == 'patients' ? 'active' : '' }}">
+                    <i class="fa-solid fa-user-injured fa-fw"></i>
+                    <span>{{ 'nav.patients'|trans }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ path('queue') }}" class="{{ nav == 'queue' ? 'active' : '' }}">
+                    <i class="fa-solid fa-list-check fa-fw"></i>
+                    <span>{{ 'nav.report_queue'|trans }}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ path('new_report') }}" class="{{ nav == 'new_report' ? 'active' : '' }}">
+                    <i class="fa-solid fa-file-circle-plus fa-fw"></i>
+                    <span>{{ 'nav.new_report'|trans }}</span>
+                </a>
+            </li>
+            {% if is_admin %}
+                <li>
+                    <a href="{{ path('physicians') }}" class="{{ nav == 'physicians' ? 'active' : '' }}">
+                        <i class="fa-solid fa-user-doctor fa-fw"></i>
+                        <span>{{ 'nav.physicians'|trans }}</span>
+                    </a>
+                </li>
+            {% endif %}
+            {% if user is not null %}
+                <li class="sw-nav-section">{{ 'nav.section.account'|trans }}</li>
+                <li>
+                    <a href="{{ path('account') }}" class="{{ nav == 'account' ? 'active' : '' }}">
+                        <i class="fa-solid fa-key fa-fw"></i>
+                        <span>{{ 'nav.change_password'|trans }}</span>
+                    </a>
+                </li>
+                <li>
+                    <form method="post" action="{{ path('logout') }}" class="sw-nav-logout-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="sw-nav-logout-btn">
+                            <i class="fa-solid fa-arrow-right-from-bracket fa-fw"></i>
+                            <span>{{ 'nav.logout'|trans }}</span>
+                        </button>
+                    </form>
+                </li>
+            {% endif %}
+        </ul>
+        <div class="sw-sidebar-footer">
+            {% if user is not null %}
+                {{ sw_locale_switcher_html()|raw }}
+                <div class="sw-sidebar-user">
+                    <i class="fa-solid {{ is_admin ? 'fa-user-shield' : 'fa-user-doctor' }}"></i>
+                    <strong>{{ user.username }}</strong>
+                    {% if is_admin %}
+                        <span class="text-warning">{{ 'nav.admin_badge'|trans }}</span>
+                    {% endif %}
+                </div>
+            {% else %}
+                <i class="fa-solid fa-circle-info"></i> {{ 'footer.app_line'|trans }}
+            {% endif %}
+        </div>
+    </aside>
+    <main class="sw-content">
+        {% block topbar %}
+            {% if topbar_heading is defined and topbar_heading != '' %}
+                <header class="sw-topbar">
+                    {% if topbar_breadcrumbs is defined and topbar_breadcrumbs|length > 0 %}
+                        <nav class="sw-topbar-breadcrumb" aria-label="{{ 'crumb.aria'|trans }}">
+                            <ol class="breadcrumb sw-breadcrumb mb-0">
+                                {% for c in topbar_breadcrumbs %}
+                                    {% set is_last = loop.last %}
+                                    <li class="breadcrumb-item{% if is_last %} active{% endif %}"{% if is_last %} aria-current="page"{% endif %}>
+                                        {% if c.href is defined and c.href != '' and not is_last %}
+                                            <a href="{{ c.href }}">{{ c.label }}</a>
+                                        {% else %}
+                                            {{ c.label }}
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ol>
+                        </nav>
+                    {% endif %}
+                    <div class="sw-topbar-main">
+                        <h1 class="sw-topbar-title">{{ topbar_heading|raw }}</h1>
+                        {% if topbar_actions is defined and topbar_actions != '' %}
+                            <div class="sw-topbar-actions">{{ topbar_actions|raw }}</div>
+                        {% endif %}
+                    </div>
+                </header>
+            {% endif %}
+        {% endblock %}
+        {% block body %}{% endblock %}
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

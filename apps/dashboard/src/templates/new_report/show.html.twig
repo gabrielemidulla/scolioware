@@ -1,0 +1,96 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'new_report.title'|trans }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'new_report.title'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-file-circle-plus"></i> {{ 'new_report.heading'|trans }}
+{% endset %}
+
+{% block body %}
+{% if patients is empty %}
+    <div class="sw-card">
+        <div class="sw-card-body">
+            {% set patient_link %}<a href="{{ path('patients') }}">{{ 'new_report.patient_link'|trans }}</a>{% endset %}
+            <p class="mb-0">{{ 'new_report.empty'|trans({'%patient_link%': patient_link})|raw }}</p>
+        </div>
+    </div>
+{% else %}
+    <div class="sw-card" style="max-width: 640px;">
+        <div class="sw-card-header">
+            <i class="fa-solid fa-upload"></i> {{ 'new_report.card'|trans }}
+        </div>
+        <div class="sw-card-body">
+            <div class="mb-3">
+                <label class="form-label">{{ 'new_report.label_patient'|trans }}</label>
+                <select class="form-select" id="patient_id">
+                    {% for p in patients %}
+                        <option value="{{ p.id }}">{{ p.last_name|e }}, {{ p.first_name|e }} ({{ p.tax_code|e }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ 'new_report.label_image'|trans }}</label>
+                <input class="form-control" type="file" id="image" accept="image/*,.dcm,.dicom,application/dicom">
+            </div>
+            <button type="button" id="btn" class="btn btn-primary">
+                <i class="fa-solid fa-paper-plane fa-fw"></i> {{ 'new_report.submit'|trans }}
+            </button>
+            <a href="{{ back_append(path('queue')) }}" class="btn btn-secondary">
+                <i class="fa-solid fa-list-check fa-fw"></i> {{ 'new_report.queue_btn'|trans }}
+            </a>
+            <div id="msg"></div>
+        </div>
+    </div>
+
+    {% set nr_i18n = {
+        pick: 'new_report.js_pick'|trans,
+        queued: 'new_report.js_queued'|trans,
+        err: 'new_report.js_error'|trans,
+        err404: 'new_report.js_error_404'|trans,
+    } %}
+<script>
+        window.__NR_I18N = {{ nr_i18n|json_encode(263)|raw }};
+        var __nrReportUrlZero = {{ report_url_zero|json_encode(263)|raw }};
+        document.getElementById('btn').onclick = async function () {
+            var I = window.__NR_I18N;
+            var pid = document.getElementById('patient_id').value;
+            var f = document.getElementById('image').files[0];
+            var msg = document.getElementById('msg');
+            msg.textContent = '';
+            if (!f) { msg.textContent = I.pick; return; }
+            var fd = new FormData();
+            fd.append('patient_id', pid);
+            fd.append('image', f, f.name);
+            try {
+                var res = await fetch('/inference/v2/enqueue', { method: 'POST', body: fd });
+                var raw = await res.text();
+                var j = {};
+                try { j = raw ? JSON.parse(raw) : {}; } catch (parseErr) { j = {}; }
+                if (!res.ok) {
+                    var detail = typeof j.detail === 'string' ? j.detail
+                        : (j.detail !== undefined && j.detail !== null ? JSON.stringify(j.detail) : raw.replace(/\s+/g, ' ').trim().slice(0, 400));
+                    if (!detail) { detail = raw.replace(/\s+/g, ' ').trim().slice(0, 400) || ('HTTP ' + res.status); }
+                    var codeStr = String(res.status);
+                    var errLine = I.err
+                        .split('%code%').join(codeStr)
+                        .split('%detail%').join(detail)
+                        .split('{code}').join(codeStr)
+                        .split('{detail}').join(detail);
+                    if (res.status === 404) { errLine += I.err404; }
+                    msg.textContent = errLine;
+                    return;
+                }
+                var rid = String(j.report_id != null ? j.report_id : '');
+                msg.textContent = I.queued.split('%id%').join(rid).split('{id}').join(rid);
+                location.href = __nrReportUrlZero.replace(/id=0\b/, 'id=' + encodeURIComponent(String(j.report_id)));
+            } catch (e) {
+                msg.textContent = String(e);
+            }
+        };
+    </script>
+{% endif %}
+{% endblock %}

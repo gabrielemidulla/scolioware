@@ -1,0 +1,174 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'queue.title'|trans }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'queue.title'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-list-check"></i> {{ 'queue.title'|trans }}
+{% endset %}
+{% set topbar_actions %}
+    <a href="{{ path('new_report') }}" class="btn btn-primary">
+        <i class="fa-solid fa-file-circle-plus fa-fw"></i> {{ 'queue.new_report'|trans }}
+    </a>
+{% endset %}
+
+{% block body %}
+<div class="sw-card sw-filters mb-3">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-filter"></i> {{ 'queue.filters'|trans }}
+    </div>
+    <div class="sw-card-body">
+        <form method="get" action="{{ path('queue') }}" class="row g-2">
+            <input type="hidden" name="page" value="1">
+            {% if back_ok and back_raw is not null %}
+                <input type="hidden" name="back" value="{{ back_raw|e('html_attr') }}">
+            {% endif %}
+
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label">{{ 'queue.patient'|trans }}</label>
+                <select class="form-select" name="patient_id">
+                    <option value="">{{ 'queue.all_patients'|trans }}</option>
+                    {% for p in allPatients %}
+                        <option value="{{ p.id }}"{% if patientId == p.id %} selected{% endif %}>
+                            {{ p.last_name }}, {{ p.first_name }} ({{ p.tax_code }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.tax'|trans }}</label>
+                <input class="form-control" name="tax" value="{{ tax|e('html_attr') }}" placeholder="{{ 'queue.tax_ph'|trans }}" autocomplete="off">
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.status'|trans }}</label>
+                <select class="form-select" name="status">
+                    <option value="">{{ 'common.all'|trans }}</option>
+                    {% for st in allowed_status %}
+                        <option value="{{ st|e('html_attr') }}"{% if f.status == st %} selected{% endif %}>{{ ('status.' ~ st)|trans }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.curve'|trans }}</label>
+                <select class="form-select" name="curve">
+                    <option value=""{% if f.curve == '' %} selected{% endif %}>{{ 'curve.filter_all'|trans }}</option>
+                    <option value="C"{% if f.curve == 'C' %} selected{% endif %}>{{ 'curve.opt_c'|trans }}</option>
+                    <option value="S"{% if f.curve == 'S' %} selected{% endif %}>{{ 'curve.opt_s'|trans }}</option>
+                    <option value="unspecified"{% if f.curve == 'unspecified' %} selected{% endif %}>{{ 'curve.opt_unspecified'|trans }}</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label">{{ 'queue.rid'|trans }}</label>
+                <input class="form-control" name="rid" value="{{ f.ridExact|e('html_attr') }}" placeholder="{{ 'queue.rid_ph'|trans }}" inputmode="numeric">
+            </div>
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label">{{ 'queue.rid_min'|trans }}</label>
+                <input class="form-control" name="rid_min" value="{{ f.ridMin > 0 ? f.ridMin : '' }}" placeholder="{{ 'queue.ph_min'|trans }}" inputmode="numeric">
+            </div>
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label">{{ 'queue.rid_max'|trans }}</label>
+                <input class="form-control" name="rid_max" value="{{ f.ridMax > 0 ? f.ridMax : '' }}" placeholder="{{ 'queue.ph_max'|trans }}" inputmode="numeric">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.tor_min'|trans }}</label>
+                <input class="form-control" name="tor_min" value="{{ f.torMin is not null ? f.torMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.tor_max'|trans }}</label>
+                <input class="form-control" name="tor_max" value="{{ f.torMax is not null ? f.torMax : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.lum_min'|trans }}</label>
+                <input class="form-control" name="lum_min" value="{{ f.lumMin is not null ? f.lumMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.lum_max'|trans }}</label>
+                <input class="form-control" name="lum_max" value="{{ f.lumMax is not null ? f.lumMax : '' }}" inputmode="decimal">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.cobb_min'|trans }}</label>
+                <input class="form-control" name="cobb_min" value="{{ f.cobbMin is not null ? f.cobbMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.cobb_max'|trans }}</label>
+                <input class="form-control" name="cobb_max" value="{{ f.cobbMax is not null ? f.cobbMax : '' }}" inputmode="decimal">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.h_min'|trans }}</label>
+                <input class="form-control" name="h_cm_min" value="{{ f.hCmMin is not null ? f.hCmMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.h_max'|trans }}</label>
+                <input class="form-control" name="h_cm_max" value="{{ f.hCmMax is not null ? f.hCmMax : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.w_min'|trans }}</label>
+                <input class="form-control" name="w_kg_min" value="{{ f.wKgMin is not null ? f.wKgMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.w_max'|trans }}</label>
+                <input class="form-control" name="w_kg_max" value="{{ f.wKgMax is not null ? f.wKgMax : '' }}" inputmode="decimal">
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.created_from'|trans }}</label>
+                <input class="form-control" type="date" name="created_from" value="{{ f.createdFrom|e('html_attr') }}">
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.created_to'|trans }}</label>
+                <input class="form-control" type="date" name="created_to" value="{{ f.createdTo|e('html_attr') }}">
+            </div>
+
+            <div class="col-12 d-flex flex-wrap gap-2 align-items-end mt-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-magnifying-glass fa-fw"></i> {{ 'queue.apply'|trans }}
+                </button>
+                <a href="{{ back_preserve(path('queue')) }}" class="btn btn-secondary">
+                    <i class="fa-solid fa-xmark fa-fw"></i> {{ 'queue.clear'|trans }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="sw-queue-live" data-poll-ms="8000">
+    {% include 'queue/_fragment.html.twig' %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var root = document.getElementById('sw-queue-live');
+    if (!root) return;
+    var ms = parseInt(root.getAttribute('data-poll-ms') || '8000', 10);
+    if (ms < 2000) ms = 2000;
+    function poll() {
+        if (document.hidden) return;
+        var u = new URL(window.location.href);
+        u.searchParams.set('_fragment', '1');
+        fetch(u.toString(), {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (r) {
+                if (!r.ok) return Promise.reject();
+                if (r.headers.get('X-Scolioware-Queue-Fragment') !== 'ok') {
+                    return Promise.reject();
+                }
+                return r.text();
+            })
+            .then(function (html) { root.innerHTML = html; })
+            .catch(function () {});
+    }
+    setInterval(poll, ms);
+})();
+</script>
+{% endblock %}

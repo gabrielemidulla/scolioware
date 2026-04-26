@@ -1,0 +1,122 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'new_pdf.title'|trans({'%id%': report.id}) }}{% endblock %}
+
+{% set pdf_patient_crumb = report.last_name ~ ', ' ~ report.first_name %}
+{% set rep_crumb = 'report.title'|trans({'%id%': report.id}) %}
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'crumb.patients'|trans, href: path('patients') },
+    { label: pdf_patient_crumb, href: path('patient', {id: report.patient_id}) },
+    { label: rep_crumb, href: path('report', {id: report.id}) },
+    { label: 'new_pdf.heading'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-file-pdf"></i> {{ 'new_pdf.heading'|trans }}
+{% endset %}
+{% set topbar_actions %}
+    <a href="{{ back_or(report_back_fallback)|e('html_attr') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left fa-fw"></i> {{ 'common.back'|trans }}
+    </a>
+    <a href="{{ back_append(path('report', {id: report.id})) }}" class="btn btn-secondary">
+        <i class="fa-solid fa-file-medical fa-fw"></i> {{ 'common.report'|trans }}
+    </a>
+    <a href="{{ back_append(path('patient', {id: report.patient_id})) }}" class="btn btn-secondary">
+        <i class="fa-solid fa-user-injured fa-fw"></i> {{ 'common.patient'|trans }}
+    </a>
+{% endset %}
+
+{% block body %}
+{% set nd = 'common.dash'|trans %}
+{% if errors is not empty %}
+    <div class="alert alert-danger">
+        <strong>{{ 'new_pdf.err_title'|trans }}</strong>
+        <ul class="mb-0">{% for err in errors %}<li>{{ err|e }}</li>{% endfor %}</ul>
+    </div>
+{% endif %}
+
+<div class="sw-card mb-3">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-id-card"></i> {{ 'new_pdf.source'|trans }}
+    </div>
+    <div class="sw-card-body small">
+        <div class="row g-2">
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_report'|trans }}</span><br><strong>#{{ report.id }}</strong></div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_patient'|trans }}</span><br>{{ report.first_name|e }} {{ report.last_name|e }}</div>
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.tax'|trans }}</span><br><code>{{ report.tax_code|e }}</code></div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_status'|trans }}</span><br>
+                <span class="{{ sw_status_class(report.status) }}">
+                    {{ sw_status_icon_markup(report.status)|raw }}
+                    <span class="sw-status-text">{{ ('status.' ~ report.status)|trans }}</span>
+                </span>
+            </div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_curve'|trans }}</span><br>
+                {% set c0 = report.curve_type ?? '' %}
+                {% if c0 == '' %}{{ nd }}{% else %}{{ curve_filter_label(c0)|e }}{% endif %}
+            </div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_max'|trans }}</span><br>
+                {% set reg = report.cobb_max_region ?? '' %}
+                {% set mx = report.cobb_max_deg ?? null %}
+                {% if mx is not null and mx != '' %}{{ reg|upper|e }} {{ (0 + mx)|number_format(2) }}°{% else %}{{ nd }}{% endif %}
+            </div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_tor'|trans }}</span><br>
+                {% set thor = report.cobb_thoracic_deg ?? null %}
+                {% if thor is not null and thor != '' %}{{ (0 + thor)|number_format(2) }}{% else %}{{ nd }}{% endif %} °
+            </div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_lum'|trans }}</span><br>
+                {% set lum = report.cobb_lumbar_deg ?? null %}
+                {% if lum is not null and lum != '' %}{{ (0 + lum)|number_format(2) }}{% else %}{{ nd }}{% endif %} °
+            </div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_hexam'|trans }}</span><br>
+                {% set hc = report.height_cm ?? null %}
+                {% if hc is not null and hc != '' %}{{ (0 + hc)|number_format(2) }}{{ 'patient.unit_cm'|trans }}{% else %}{{ nd }}{% endif %}
+            </div>
+            <div class="col-md-3"><span class="text-muted">{{ 'new_pdf.sub_wexam'|trans }}</span><br>
+                {% set wk = report.weight_kg ?? null %}
+                {% if wk is not null and wk != '' %}{{ (0 + wk)|number_format(2) }}{{ 'patient.unit_kg'|trans }}{% else %}{{ nd }}{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="sw-card">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-pen-to-square"></i> {{ 'new_pdf.content'|trans }}
+    </div>
+    <div class="sw-card-body">
+        {% if report.status != 'completed' %}
+            <div class="alert alert-warning small">
+                {{ 'new_pdf.warn_incomplete'|trans({'%status%': ('status.' ~ report.status)|trans})|raw }}
+            </div>
+        {% endif %}
+        <form method="post" action="{{ path('new_pdf', {report_id: report.id}) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <input type="hidden" name="report_id" value="{{ report.id }}">
+
+            <div class="mb-3">
+                <label class="form-label">{{ 'new_pdf.label_title'|trans }}</label>
+                <input class="form-control" name="title" maxlength="200"
+                       placeholder="{{ default_title|e('html_attr') }}"
+                       value="{{ form_title|e('html_attr') }}">
+                <div class="form-text">{{ 'new_pdf.hint_title'|trans }}</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">{{ 'new_pdf.notes'|trans }}</label>
+                <textarea class="form-control" name="notes" rows="10"
+                          placeholder="{{ 'new_pdf.notes_ph'|trans|e('html_attr') }}">{{ form_notes|e }}</textarea>
+                <div class="form-text">{{ 'new_pdf.hint_notes'|trans }}</div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="include_image" name="include_image" value="1"{% if include_image %} checked{% endif %}>
+                <label class="form-check-label" for="include_image">{{ 'new_pdf.include_img'|trans }}</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-file-pdf fa-fw"></i> {{ 'new_pdf.generate'|trans }}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

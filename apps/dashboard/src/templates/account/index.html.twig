@@ -1,0 +1,51 @@
+{% extends 'layout/app_shell.html.twig' %}
+
+{% block title %}{{ 'account.title'|trans }}{% endblock %}
+
+{% block body %}
+<div class="sw-card" style="max-width: 540px;">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-key"></i> {{ 'account.title'|trans }}
+    </div>
+    <div class="sw-card-body">
+        <p class="text-muted small mb-3">
+            <i class="fa-solid fa-user-doctor"></i> {{ user.username }}
+            {% if user.is_admin == 1 %}
+                <span class="text-warning ms-1">{{ 'nav.admin_badge'|trans }}</span>
+            {% endif %}
+        </p>
+        {% if must_change and success == '' %}
+            <div class="alert alert-warning py-2 mb-3" role="alert">
+                <i class="fa-solid fa-key"></i> {{ 'account.must_change_notice'|trans }}
+            </div>
+        {% endif %}
+        {% if success != '' %}
+            <div class="alert alert-success py-2"><i class="fa-solid fa-circle-check"></i> {{ success }}</div>
+        {% endif %}
+        {% if error != '' %}
+            <div class="alert alert-danger py-2"><i class="fa-solid fa-triangle-exclamation"></i> {{ error }}</div>
+        {% endif %}
+        <form method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <div class="mb-3">
+                <label class="form-label">{{ 'account.label_current'|trans }}</label>
+                <input class="form-control" type="password" name="current_password" required autocomplete="current-password">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ 'account.label_new'|trans }}</label>
+                <input class="form-control" type="password" name="new_password" required
+                       minlength="{{ min_pw_len }}" autocomplete="new-password">
+                <div class="form-text">{{ 'account.min_help'|trans({'min': min_pw_len}) }}</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ 'account.label_confirm'|trans }}</label>
+                <input class="form-control" type="password" name="new_password_confirm" required
+                       minlength="{{ min_pw_len }}" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk fa-fw"></i> {{ 'account.submit'|trans }}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

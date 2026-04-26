@@ -1,0 +1,12 @@
+# https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    # PHP session is legacy SW_SESSION; Symfony session stays off.
+    session: false
+    php_errors:
+        log: true
+    handle_all_throwables: true
+
+when@test:
+    framework:
+        test: true

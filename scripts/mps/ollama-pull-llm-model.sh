@@ -8,11 +8,11 @@ set -euo pipefail
 #   ./scripts/mps/ollama-pull-llm-model.sh
 #   ./scripts/mps/ollama-pull-llm-model.sh medgemma:4b
 #
-# Picks OLLAMA_LLM_MODEL from the environment, or from infra/.env (same as compose).
+# OLLAMA_LLM_MODEL from env, else last match in apps/inference/.env.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MDL="${OLLAMA_LLM_MODEL:-medgemma:4b}"
-_env="$REPO_ROOT/infra/.env"
+_env="$REPO_ROOT/apps/inference/.env"
 if [[ -f "$_env" ]]; then
   _line=$(grep -E '^[[:space:]]*OLLAMA_LLM_MODEL=' "$_env" | tail -1 || true)
   if [[ -n "${_line}" ]]; then

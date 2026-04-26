@@ -1,0 +1,302 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'report.title'|trans({'%id%': row.id}) }}{% endblock %}
+
+{% set rep_title = 'report.title'|trans({'%id%': row.id}) %}
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'crumb.patients'|trans, href: path('patients') },
+    { label: patient_breadcrumb_label, href: path('patient', {id: row.patient_id}) },
+    { label: rep_title },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-file-medical"></i> {{ rep_title|e }}
+{% endset %}
+{% set topbar_actions %}
+    {% if has_back %}
+        <a href="{{ back_or('queue.php')|e('html_attr') }}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left fa-fw"></i> {{ 'common.back'|trans }}
+        </a>
+    {% else %}
+        <a href="{{ path('queue') }}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left fa-fw"></i> {{ 'common.queue'|trans }}
+        </a>
+    {% endif %}
+    {% if is_admin %}
+        <form method="post" class="d-inline ms-1" onsubmit="return confirm({{ 'report.admin_delete_confirm'|trans|json_encode(261)|raw }});">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <input type="hidden" name="report_id" value="{{ id }}">
+            <button type="submit" name="admin_delete_report" value="1" class="btn btn-danger">
+                <i class="fa-solid fa-trash fa-fw"></i> {{ 'report.admin_delete'|trans }}
+            </button>
+        </form>
+    {% endif %}
+{% endset %}
+
+{% block body %}
+{% set nd = 'common.dash'|trans %}
+{% if vitals_errors is not empty %}
+    <div class="alert alert-danger mb-3" role="alert">
+        <strong>{{ 'report.cannot_save_vitals'|trans }}</strong>
+        <ul class="mb-0 mt-2">{% for msg in vitals_errors %}<li>{{ msg|e }}</li>{% endfor %}</ul>
+    </div>
+{% endif %}
+{% if vitals_saved_ok %}
+    <div class="alert alert-success mb-3" role="alert">
+        <strong>{{ 'report.vitals_saved'|trans }}</strong> {{ 'report.vitals_saved_desc'|trans }}
+    </div>
+{% endif %}
+{% if landmarks_recompute_ok %}
+    <div class="alert alert-success mb-3" role="alert">{{ 'report.landmarks_recompute_ok'|trans }}</div>
+{% endif %}
+{% if flash_report_delete_fail != '' %}
+    <div class="alert alert-danger mb-3" role="alert">{{ flash_report_delete_fail|e }}</div>
+{% endif %}
+
+<div class="sw-card">
+    <div class="sw-card-body">
+        <p class="mb-1 d-flex flex-wrap align-items-center gap-2">
+            <span>
+                <i class="fa-solid fa-user-injured text-muted"></i>
+                <strong>{{ row.first_name|e }} {{ row.last_name|e }}</strong>
+                &middot; <code>{{ row.tax_code|e }}</code>
+            </span>
+            <a href="{{ back_append(path('patient', {id: row.patient_id})) }}" class="btn btn-sm btn-secondary">
+                <i class="fa-solid fa-user-injured fa-fw"></i> {{ 'report.patient_btn'|trans }}
+            </a>
+        </p>
+        <p class="mb-0">
+            {{ 'report.status'|trans }}:
+            <span id="status" class="{{ sw_status_class(row.status) }}">{{ sw_status_icon_markup(row.status)|raw }}<span class="sw-status-text">{{ ('status.' ~ row.status)|trans }}</span></span>
+            &nbsp; {{ 'report.curve'|trans }}: <span id="curve" class="fw-semibold">{% set ct0 = row.curve_type ?? '' %}{% if ct0 == '' %}{{ nd }}{% else %}{{ curve_filter_label(ct0)|e }}{% endif %}</span>
+            <span class="text-muted" id="vitals_wrap"{% if not show_vitals %} style="display:none;"{% endif %}> &middot; {{ 'report.exam'|trans }}: <strong id="vitals">{{ vitals_text|e }}</strong></span>
+        </p>
+    </div>
+</div>
+
+<div class="sw-report-main-grid">
+    <div class="sw-report-main-left d-flex flex-column min-h-0 gap-3">
+        <div class="sw-card flex-shrink-0">
+            <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span><i class="fa-solid fa-ruler-combined"></i> {{ 'report.measurements'|trans }}</span>
+                {% if can_revise_metrics %}
+                    <a href="{{ back_append(path('report_edit_metrics', {id: row.id})) }}" class="btn btn-sm btn-primary">
+                        <i class="fa-solid fa-pen fa-fw"></i> {{ 'report.edit'|trans }}
+                    </a>
+                {% endif %}
+            </div>
+            <div class="sw-card-body p-0">
+                <table class="table mb-0" id="cobb_summary">
+                    <tbody>
+                        <tr><th>{{ 'report.cobb_pt'|trans }}</th><td id="cobb_pt">—</td></tr>
+                        <tr><th>{{ 'report.cobb_mt'|trans }}</th><td id="cobb_mt">—</td></tr>
+                        <tr><th>{{ 'report.cobb_tl'|trans }}</th><td id="cobb_tl">—</td></tr>
+                        <tr><th>{{ 'report.cobb_th'|trans }}</th><td id="cobb_thoracic">—</td></tr>
+                        <tr><th>{{ 'report.cobb_lum'|trans }}</th><td id="cobb_lumbar">—</td></tr>
+                        <tr><th>{{ 'report.cobb_max'|trans }}</th><td id="cobb_max">—</td></tr>
+                        <tr><th>{{ 'report.cobb_verts'|trans }}</th><td id="cobb_verts">—</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="d-flex gap-2 align-items-stretch flex-grow-1 min-h-0 sw-report-vitals-pdf-row">
+            <div class="d-flex align-items-stretch flex-shrink-0 sw-report-vitals-pdf-col">
+                <div class="sw-card sw-report-vitals-card w-100 d-flex flex-column">
+                    <div class="sw-card-header">
+                        <i class="fa-solid fa-ruler-vertical"></i> {{ 'report.vitals'|trans }}
+                    </div>
+                    <div class="sw-card-body d-flex flex-column flex-grow-1">
+                        <form class="d-flex flex-column flex-grow-1" method="post" action="{{ back_preserve(path('report', {id: id})) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                            <input type="hidden" name="report_id" value="{{ id }}">
+                            <input type="hidden" name="back" value="{{ (back_raw ?? '')|e('html_attr') }}">
+                            <div class="mb-3">
+                                <label class="form-label" for="height_cm">{{ 'report.h_cm'|trans }}</label>
+                                <input class="form-control" id="height_cm" name="height_cm" inputmode="decimal" autocomplete="off"
+                                       placeholder="{{ 'report.h_ph'|trans }}" value="{{ vitals_form_h|e('html_attr') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="weight_kg">{{ 'report.w_kg'|trans }}</label>
+                                <input class="form-control" id="weight_kg" name="weight_kg" inputmode="decimal" autocomplete="off"
+                                       placeholder="{{ 'report.w_ph'|trans }}" value="{{ vitals_form_w|e('html_attr') }}">
+                            </div>
+                            <div class="mt-auto pt-1">
+                                <button type="submit" name="save_report_vitals" value="1" class="btn btn-primary">
+                                    <i class="fa-solid fa-floppy-disk fa-fw"></i> {{ 'report.save'|trans }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-grow-1 min-w-0 d-flex flex-column">
+                <div class="sw-card sw-report-pdf-card h-100 d-flex flex-column flex-grow-1 min-h-0" id="pdf-reports">
+                    <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2 flex-shrink-0">
+                        <span>
+                            <i class="fa-solid fa-file-pdf"></i> {{ 'report.pdf_section'|trans }}
+                            <span class="text-muted fw-normal">{{ pdf_count_line|e }}</span>
+                        </span>
+                        <a href="{{ back_append(path('new_pdf', {report_id: row.id})) }}" class="btn btn-sm btn-primary">
+                            <i class="fa-solid fa-file-pdf fa-fw"></i> {{ 'report.create_pdf'|trans }}
+                        </a>
+                    </div>
+                    <div class="sw-card-body p-0 d-flex flex-column flex-grow-1 min-h-0">
+                        <div class="table-responsive sw-report-pdf-table-wrap flex-grow-1 min-h-0">
+                            <table class="table table-striped mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>{{ 'report.col_pdf'|trans }}</th>
+                                        <th>{{ 'report.col_title'|trans }}</th>
+                                        <th>{{ 'report.col_physician'|trans }}</th>
+                                        <th>{{ 'report.col_created'|trans }}</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% set pdf_dash = '<span class="text-muted">' ~ nd|e ~ '</span>' %}
+                                {% for pr in pdf_reports %}
+                                    <tr id="pdf-{{ pr.id }}">
+                                        <td><strong>#{{ pr.id }}</strong></td>
+                                        <td>{% set t = pr.title ?? '' %}{% if t != '' %}{{ t|e }}{% else %}{{ pdf_dash|raw }}{% endif %}</td>
+                                        <td>{% set dn = (pr.physician_display_name ?? '')|trim %}{% set un = pr.physician_username ?? '' %}{% if dn != '' %}{{ dn|e }}{% elseif un != '' %}<code>{{ un|e }}</code>{% else %}{{ pdf_dash|raw }}{% endif %}</td>
+                                        <td><span class="text-muted small">{{ pr.created_at|e }}</span></td>
+                                        <td class="text-end">
+                                            <a href="{{ path('pdf_legacy', {id: pr.id}) }}" target="_blank" rel="noopener"
+                                               class="btn btn-primary btn-sm"
+                                               aria-label="{{ 'report.aria_open_pdf'|trans|e('html_attr') }}"><i class="fa-solid fa-download fa-fw"></i></a>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="5" class="text-center text-muted py-4">{{ 'report.pdf_empty'|trans }}</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="sw-report-pdf-footer border-top flex-shrink-0 px-2 py-2 d-flex align-items-center justify-content-center">
+                            {% include 'partials/pagination.html.twig' with {
+                                route: 'report',
+                                page: pdf_page,
+                                total_pages: pdf_total_pages,
+                                query: pdf_pagination_query,
+                                page_param: 'pdf_page'
+                            } only %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sw-report-main-images d-flex flex-column min-h-0">
+        <div class="sw-card sw-report-images-card flex-grow-1 d-flex flex-column min-h-0">
+            <div class="sw-card-header flex-shrink-0 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span>
+                    <i class="fa-solid fa-images"></i> {{ 'report.images'|trans }}
+                    <span class="text-muted fw-normal small">{{ 'report.img_hint'|trans }}</span>
+                </span>
+                <button type="button" id="open_landmark_editor" class="btn btn-sm btn-primary" style="display:none;"
+                        data-bs-toggle="modal" data-bs-target="#svLandmarkEditor">
+                    <i class="fa-solid fa-compasw-drafting fa-fw"></i> {{ 'lmk.open_btn'|trans }}
+                </button>
+            </div>
+            <div class="sw-card-body flex-grow-1 d-flex flex-column min-h-0">
+                <div class="row g-2 sw-report-image-row flex-grow-1 align-items-stretch min-h-0">
+                    <div class="col-6 d-flex min-h-0">
+                        <div class="sw-report-thumb-wrap flex-grow-1 w-100" id="img_orig_wrap" style="display:none;" role="button" tabindex="0" aria-label="{{ 'report.aria_orig'|trans|e('html_attr') }}">
+                            <img id="img_orig" class="sw-report-thumb" alt="{{ 'report.label_orig'|trans|e('html_attr') }}">
+                            <span class="sw-report-thumb-label">{{ 'report.label_orig'|trans }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6 d-flex min-h-0">
+                        <div class="sw-report-thumb-wrap flex-grow-1 w-100" id="img_comp_wrap" style="display:none;" role="button" tabindex="0" aria-label="{{ 'report.aria_comp'|trans|e('html_attr') }}">
+                            <img id="img_comp" class="sw-report-thumb" alt="{{ 'report.label_overlay'|trans|e('html_attr') }}">
+                            <span class="sw-report-thumb-label">{{ 'report.label_overlay'|trans }}</span>
+                        </div>
+                    </div>
+                </div>
+                <p id="img_hint" class="text-muted mb-0 mt-2 small"></p>
+                <p id="poll_error" class="text-danger mb-0 mt-2 small" style="display:none;"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="sw-card mt-3" id="llm_card" style="display:none;">
+    <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> {{ 'llm.title'|trans }}
+        </span>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span id="llm_meta" class="text-muted small"></span>
+            <button type="button" id="llm_generate" class="btn btn-sm btn-primary">
+                <i class="fa-solid fa-wand-magic-sparkles fa-fw"></i>
+                <span id="llm_btn_label">{{ 'llm.generate'|trans }}</span>
+            </button>
+        </div>
+    </div>
+    <div class="sw-card-body">
+        <p class="small text-muted mb-2">{{ 'llm.help'|trans|raw }}</p>
+        <div id="llm_status" class="small text-muted mb-2" style="display:none;"></div>
+        <div id="llm_error" class="alert alert-danger small mb-2" role="alert" style="display:none;"></div>
+        <div id="llm_empty" class="text-muted small fst-italic">{{ 'llm.empty'|trans|raw }}</div>
+        <div id="llm_draft" class="sw-llm-draft" style="display:none;"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="svLandmarkEditor" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary py-2">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-compasw-drafting"></i>
+                    {{ 'lmk.title'|trans }}
+                </h5>
+                <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
+                    <span id="lmk_count" class="text-muted small"></span>
+                    <button type="button" id="lmk_add" class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-square-plus fa-fw"></i> {{ 'lmk.add'|trans }}
+                    </button>
+                    <button type="button" id="lmk_remove" class="btn btn-sm btn-outline-light" disabled>
+                        <i class="fa-solid fa-trash-can fa-fw"></i> {{ 'lmk.remove'|trans }}
+                    </button>
+                    <button type="button" id="lmk_reset" class="btn btn-sm btn-outline-light">
+                        <i class="fa-solid fa-rotate-left fa-fw"></i> {{ 'lmk.reset'|trans }}
+                    </button>
+                    <button type="button" id="lmk_save" class="btn btn-sm btn-primary">
+                        <i class="fa-solid fa-floppy-disk fa-fw"></i> {{ 'lmk.save'|trans }}
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ 'report.aria_close'|trans|e('html_attr') }}"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 d-flex flex-column">
+                <div id="lmk_msg" class="alert alert-warning rounded-0 mb-0 py-2 small" role="alert" style="display:none;"></div>
+                <div id="lmk_help" class="px-3 py-2 small text-muted border-bottom border-secondary">
+                    {{ 'lmk.help'|trans|raw }}
+                </div>
+                <div id="lmk_stage_wrap" class="flex-grow-1 d-flex align-items-center justify-content-center sw-lmk-stage-wrap">
+                    <div id="lmk_stage" class="sw-lmk-stage"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="svImgLightbox" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary py-2">
+                <h5 class="modal-title" id="svImgLightboxTitle">{{ 'report.lightbox'|trans }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ 'report.aria_close'|trans|e('html_attr') }}"></button>
+            </div>
+            <div class="modal-body p-2 text-center d-flex align-items-center justify-content-center" style="min-height: 50vh;">
+                <img id="svImgLightboxImg" class="img-fluid rounded" alt="" style="max-height: 85vh; width: auto;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="sw-report-page-config">{{ report_page_config_json|raw }}</script>
+<script src="{{ report_page_js|e('html_attr') }}" defer></script>
+{% endblock %}

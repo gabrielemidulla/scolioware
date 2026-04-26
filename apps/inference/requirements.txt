@@ -1,8 +1,7 @@
 # App runtime (torch/torchvision installed in Dockerfile for CPU wheel index)
-boto3
-deta
 fastapi
 gunicorn
+huggingface_hub
 numpy
 opencv-python-headless
 Pillow

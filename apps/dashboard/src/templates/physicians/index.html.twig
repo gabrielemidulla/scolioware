@@ -1,0 +1,174 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'physicians.title'|trans }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'physicians.title'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-user-doctor"></i> {{ 'physicians.title'|trans }}
+{% endset %}
+
+{% block body %}
+{% set nd = 'common.dash'|trans %}
+{% if flash != '' %}
+    <div class="alert alert-{{ flash_type|e('html_attr') }} py-2">{{ flash|e }}</div>
+{% endif %}
+
+{% if generated_reset is not null %}
+    <div class="sw-card mb-3">
+        <div class="sw-card-header">
+            <i class="fa-solid fa-link"></i> {{ 'physicians.reset_link_title'|trans({'%name%': generated_reset.username}) }}
+        </div>
+        <div class="sw-card-body">
+            <p class="mb-2 text-muted small">{{ 'physicians.reset_send'|trans({'%hours%': generated_reset.ttl_hours|default(0)}) }}</p>
+            <div class="input-group">
+                <input type="text" class="form-control" value="{{ generated_reset.url|e('html_attr') }}" id="reset_url" readonly>
+                <button class="btn btn-secondary" type="button" data-copied-lbl="{{ 'physicians.copied'|trans|e('html_attr') }}"
+                    onclick="var b=this;var i=document.getElementById('reset_url');i.select();i.setSelectionRange(0,99999);
+                    navigator.clipboard.writeText(i.value).then(function(){var s=b.querySelector('.js-copy-lbl');if(s)s.textContent=b.getAttribute('data-copied-lbl');});"
+                >
+                    <i class="fa-solid fa-copy"></i> <span class="js-copy-lbl">{{ 'physicians.copy'|trans }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="sw-card">
+            <div class="sw-card-header">
+                <i class="fa-solid fa-user-plus"></i> {{ 'physicians.create'|trans }}
+            </div>
+            <div class="sw-card-body">
+                <form method="post" action="{{ path('physicians') }}" autocomplete="off">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                    <input type="hidden" name="action" value="create">
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'physicians.label_user'|trans }}</label>
+                        <input class="form-control" name="username" required maxlength="64"
+                               pattern="[a-zA-Z0-9_.\-]{3,64}" placeholder="lowercase, 3–64">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'physicians.label_display'|trans }}</label>
+                        <input class="form-control" name="display_name" maxlength="191">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'physicians.label_pass'|trans }}</label>
+                        <input class="form-control" type="password" name="password" required
+                               minlength="{{ min_password_len }}">
+                        <div class="form-text">{{ 'physicians.hint_pass'|trans({'%min%': min_password_len}) }}</div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin" value="1">
+                        <label class="form-check-label" for="is_admin">{{ 'physicians.admin'|trans }}</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk fa-fw"></i> {{ 'physicians.create_btn'|trans }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="sw-card">
+            <div class="sw-card-header">
+                <i class="fa-solid fa-list"></i> {{ 'physicians.list'|trans }}
+                <span class="text-muted fw-normal">({{ rows|length }})</span>
+            </div>
+            <div class="sw-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>{{ 'physicians.col_user'|trans }}</th>
+                                <th>{{ 'physicians.col_display'|trans }}</th>
+                                <th>{{ 'physicians.col_role'|trans }}</th>
+                                <th>{{ 'physicians.col_created'|trans }}</th>
+                                <th>{{ 'physicians.col_state'|trans }}</th>
+                                <th class="text-end">{{ 'physicians.col_actions'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for r in rows %}
+                            {% set rid = r.id %}
+                            {% set is_self = rid == admin.id %}
+                            {% set is_deleted = r.deleted_at is not null %}
+                            <tr{% if is_deleted %} class="text-muted"{% endif %}>
+                                <td>
+                                    <code>{{ r.username|e }}</code>
+                                    {% if is_self %}
+                                        <span class="badge text-bg-secondary ms-1">{{ 'physicians.you'|trans }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{% set dn = r.display_name ?? '' %}{{ dn == '' ? nd : dn|e }}</td>
+                                <td>
+                                    {% if r.is_admin == 1 %}
+                                        <span class="sw-status sw-status-completed">
+                                            <i class="fa-solid fa-user-shield sw-status-icon"></i>
+                                            <span class="sw-status-text">{{ 'physicians.role_admin'|trans }}</span>
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">{{ 'physicians.role_md'|trans }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="text-muted small">{{ r.created_at|e }}</span></td>
+                                <td>
+                                    {% if is_deleted %}
+                                        <span class="sw-status sw-status-failed">
+                                            <i class="fa-solid fa-trash sw-status-icon"></i>
+                                            <span class="sw-status-text">{{ 'physicians.state_del'|trans }}</span>
+                                        </span>
+                                    {% else %}
+                                        <span class="sw-status sw-status-completed">
+                                            <i class="fa-solid fa-circle-check sw-status-icon"></i>
+                                            <span class="sw-status-text">{{ 'physicians.state_active'|trans }}</span>
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if not is_deleted %}
+                                        {% if not is_self %}
+                                        <form method="post" action="{{ path('physicians') }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                                            <input type="hidden" name="action" value="reset_link">
+                                            <input type="hidden" name="id" value="{{ rid }}">
+                                            <button class="btn btn-secondary btn-sm" type="submit"
+                                                    title="{{ 'physicians.reset_title'|trans|e('html_attr') }}">
+                                                <i class="fa-solid fa-link"></i> {{ 'physicians.reset'|trans }}
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{{ path('physicians') }}" class="d-inline"
+                                              onsubmit="return confirm({{ 'physicians.confirm_delete'|trans({'%name%': r.username})|json_encode(261)|raw }});">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="{{ rid }}">
+                                            <button class="btn btn-secondary btn-sm" type="submit">
+                                                <i class="fa-solid fa-trash"></i> {{ 'physicians.delete'|trans }}
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    {% else %}
+                                        <form method="post" action="{{ path('physicians') }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                                            <input type="hidden" name="action" value="restore">
+                                            <input type="hidden" name="id" value="{{ rid }}">
+                                            <button class="btn btn-secondary btn-sm" type="submit">
+                                                <i class="fa-solid fa-rotate-left"></i> {{ 'physicians.restore'|trans }}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

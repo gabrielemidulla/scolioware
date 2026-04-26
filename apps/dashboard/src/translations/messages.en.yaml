@@ -1,0 +1,495 @@
+# Message ids use dot notation (e.g. common.brand). Nested keys are joined with "." when loaded.
+# Example: common → brand → catalogue id "common.brand".
+account:
+    error_current: 'Current password is incorrect.'
+    error_mismatch: 'New passwords do not match.'
+    label_confirm: 'Confirm new password'
+    label_current: 'Current password'
+    label_new: 'New password'
+    min_help: 'Minimum %min% characters.'
+    must_change_notice: 'Set a new password to continue. This is required after the first sign-in with a temporary password.'
+    submit: 'Update password'
+    success: 'Password updated.'
+    title: 'Change password'
+auth:
+    password_min: 'Password must be at least %min% characters.'
+    password_pwned: 'This password appears in known data breaches. Choose a different one.'
+common:
+    all: All
+    back: Back
+    brand: Scolioware
+    brand_suffix: '· Scolioware'
+    close: Close
+    dash: —
+    patient: Patient
+    queue: Queue
+    report: Report
+    save: Save
+crumb:
+    aria: Breadcrumb
+    create_pdf: 'Create PDF'
+    dashboard: Dashboard
+    patients: Patients
+    report_queue: 'Report queue'
+    revise_metrics: 'Revise metrics'
+curve:
+    filter_all: All
+    opt_c: 'C (single)'
+    opt_s: 'S (double)'
+    opt_unspecified: 'Not classified'
+edit:
+    breadcrumb: 'Revise metrics'
+    cancel: Cancel
+    cannot: 'Cannot revise report'
+    curve: 'Curve type'
+    curve_c: 'C — single curve'
+    curve_null: 'Not classified (NULL)'
+    curve_s: 'S — double curve'
+    err_curve: 'Curve type must be empty, C, or S.'
+    err_id: 'Missing report id'
+    err_nf: 'Report not found'
+    err_num: 'Invalid number for %field%.'
+    err_region_ch: 'Max Cobb region has invalid characters.'
+    err_region_len: 'Max Cobb region must be at most 8 characters.'
+    err_vi: 'Inferior vertebra index must be a whole number or empty.'
+    err_vs: 'Superior vertebra index must be a whole number or empty.'
+    heading: 'Revise Cobb & curve'
+    info: 'Use this form when automatic measurements <strong>failed</strong> or produced <strong>incorrect angles</strong>. Values here are stored on the report and appear in the dashboard and in generated PDFs.'
+    landmarks_err_auth: 'You must be logged in to edit landmarks.'
+    landmarks_err_inf: 'The inference service did not respond. Make sure the stack is up and the <code>inference</code> container is reachable from the <code>php</code> container on the Docker network.'
+    landmarks_err_json: 'Invalid JSON. Provide a single JSON array of numbers.'
+    landmarks_err_len: 'The list must be a JSON array of at least 136 numeric values, with each vertebra contributing 8 numbers (4 corner points × 2 coordinates).'
+    landmarks_json_lbl: 'Flat landmarks (JSON array)'
+    landmarks_json_ph: '[ x0, y0, x1, y1, … ] — JSON array of numbers (≥ 136 for 17 vertebrae × 4 corners)'
+    landmarks_recompute_btn: 'Recompute and save'
+    landmarks_recompute_h: 'Recompute from landmark points'
+    landmarks_recompute_p: 'Submit the flat <code>landmarks</code> list (JSON array of at least 136 numbers, 8 per vertebra) to recalculate Cobb angles, curve type, and the computed overlay. This is for advanced correction after you edit coordinates from the automatic output.'
+    landmarks_visual_link: 'Open the report page to edit landmarks on the X-ray (visual editor).'
+    lum: 'Lumbar / TL (°)'
+    manual: 'Manual values'
+    max_deg: 'Max Cobb (°)'
+    mt: 'MT (°)'
+    pt: 'PT (°)'
+    region: 'Max Cobb region'
+    region_ph: 'e.g. THORACIC'
+    save: 'Save metrics'
+    status_lbl: Status
+    thor: 'Thoracic (max PT/MT) (°)'
+    title: 'Revise metrics · Report #%id%'
+    tl: 'TL (°)'
+    view: 'Report view'
+    vinf: 'Max Cobb inferior vertebra (1-based)'
+    vsup: 'Max Cobb superior vertebra (1-based)'
+    warn: 'Cobb angles and curve type can only be revised for reports that are <strong>completed</strong> (to correct wrong automatic measurements) or <strong>failed</strong> (automatic measurement error). This report is <code>%status%</code>.'
+error:
+    csrf: 'Invalid CSRF token.'
+    csrf_reload: Reload
+    forbidden_admin: 'Forbidden — admin only.'
+    invalid_report_id: 'Invalid report id'
+    missing_patient_id: 'Missing patient id'
+    missing_pdf_id: 'Missing PDF id'
+    missing_report_id: 'Missing report id'
+    missing_report_id_param: 'Missing report_id'
+    patient_not_found: 'Patient not found'
+    pdf_download: 'Could not resolve a download URL right now. Try again in a moment.'
+    pdf_not_found: 'PDF report not found'
+    pdf_stream: 'Could not load the PDF. Try again in a moment.'
+    report_image_fetch: 'Could not load the image. Try again or contact an administrator.'
+    report_image_param: 'Invalid or missing report image parameters.'
+    report_not_found: 'Report not found'
+field:
+    cobb_lumbar_deg: cobb_lumbar_deg
+    cobb_max_deg: cobb_max_deg
+    cobb_mt_deg: cobb_mt_deg
+    cobb_pt_deg: cobb_pt_deg
+    cobb_thoracic_deg: cobb_thoracic_deg
+    cobb_tl_deg: cobb_tl_deg
+footer:
+    app_line: 'Scolioware Dashboard'
+gender:
+    female: female
+    male: male
+    non_binary: non-binary
+index:
+    db_card: Database
+    db_error: Error
+    db_error_detail: 'The database could not be reached. Check server logs for details.'
+    db_ok: Connected
+    new_report_btn: 'New report'
+    title: Dashboard
+lang:
+    en: English
+    it: Italiano
+    label: Language
+    switcher_aria: Language
+    title: 'Display language'
+llm:
+    confirm_regen: 'Generate a new draft? The previous one will remain in the audit trail.'
+    empty: 'No draft yet. Click <em>Generate</em> to ask the model for a brief description of this X-ray.'
+    err_auth: 'Please log in to use this feature.'
+    err_body: 'Invalid request body.'
+    err_gen: 'Generation failed:'
+    err_inf: 'Inference service is not reachable.'
+    err_load: 'Could not load the latest draft.'
+    err_status: 'A draft is only available once the report is completed (status: %status%).'
+    generate: Generate
+    generating: 'Generating description… this can take 30 – 120 seconds on CPU.'
+    help: 'A short, AI-generated first read of the X-ray to orient you before reviewing the measurements. <strong>Not a diagnosis</strong> — verify before quoting.'
+    meta: '{model} · {when} · {secs}s'
+    queued: 'Queued — waiting for the LLM worker to pick the job up…'
+    regenerate: Regenerate
+    running: 'Running on the LLM worker… this can take 30 – 120 seconds on CPU.'
+    title: 'AI preliminary description'
+lmk:
+    add: 'Add vertebra'
+    confirm_close: 'You have unsaved landmark changes. Close anyway?'
+    confirm_reset: 'Discard your edits and reload the current saved landmarks?'
+    count: '%n% vertebrae'
+    err_konva: 'Could not load the Konva drawing library (network blocked?).'
+    err_load: 'Could not load the original image.'
+    err_min: 'At least 2 vertebrae are required to compute Cobb.'
+    err_no_orig: 'No saved landmark list for this report (needs at least 136 numbers: 17 vertebrae × 4 corners × x,y). Wait for processing, paste JSON under “Revise metrics”, or fix a failed run once the model output is stored.'
+    help: 'Drag any of the four corner points on each vertebra to correct the model. Use <strong>Add</strong> to insert a new vertebra below the selected one (or at the end), <strong>Remove</strong> to delete the selected vertebra, and <strong>Save</strong> to recompute Cobb angles server-side. The original model output is preserved in the audit trail.'
+    open_btn: 'Edit landmarks'
+    remove: 'Remove selected'
+    reset: Reset
+    save: 'Recompute & save'
+    save_ok: 'Recomputed. Updating overlay…'
+    saving: Recomputing…
+    title: 'Edit landmark points'
+login:
+    error_invalid: 'Invalid username or password.'
+    error_locked: 'Too many sign-in attempts. Please wait a few minutes and try again.'
+    error_required: 'Username and password are required.'
+    heading: 'Sign in'
+    help_reset: 'Lost your password? Ask the administrator for a reset link.'
+    label_password: Password
+    label_username: Username
+    page_title: 'Sign in · Scolioware'
+    submit: 'Sign in'
+nav:
+    admin_badge: (admin)
+    change_password: 'Change password'
+    dashboard: Dashboard
+    logout: 'Log out'
+    new_report: 'New report'
+    patients: Patients
+    physicians: Physicians
+    report_queue: 'Report queue'
+    section:
+        account: Account
+        main: Main
+new_pdf:
+    content: 'PDF content'
+    default_title: 'Report #%rid% — %surname%, %name%'
+    err_notes_len: 'Notes are too long (max 50000 chars).'
+    err_render: 'PDF rendering: '
+    err_title: 'Could not create the PDF.'
+    err_title_len: 'Title is too long (max 200 chars).'
+    err_upload: 'Could not upload the PDF.'
+    generate: 'Generate & store PDF'
+    heading: 'Create PDF report'
+    hint_notes: 'Plain text. Line breaks are preserved.'
+    hint_title: 'Defaults to a sensible patient + report header if left blank.'
+    include_img: 'Embed the computed overlay image (X-ray + landmarks)'
+    label_title: Title
+    notes: 'Physician notes'
+    notes_ph: 'Clinical impression, recommended follow-up, treatment plan…'
+    source: 'Source report'
+    sub_curve: Curve
+    sub_hexam: 'Height (exam)'
+    sub_lum: Lumbar
+    sub_max: 'Max Cobb'
+    sub_patient: Patient
+    sub_report: Report
+    sub_status: Status
+    sub_tor: Thoracic
+    sub_wexam: 'Weight (exam)'
+    title: 'Create PDF · Report #%id%'
+    warn_incomplete: 'Note: this report is <strong>%status%</strong>. The Cobb summary may be incomplete and the overlay image may be missing.'
+new_report:
+    card: 'Process scan'
+    empty: 'Create a %patient_link% first, then come back to process a scan.'
+    heading: 'New X-ray report'
+    js_error: 'Error %code%: %detail%'
+    js_error_404: ' — If this says "Not Found", rebuild the processing container (see docker-compose service name): docker compose build inference && docker compose up -d inference'
+    js_pick: 'Choose an image.'
+    js_queued: 'Report %id% submitted. Redirecting…'
+    label_image: 'X-ray image (JPEG/PNG) or DICOM ( .dcm )'
+    label_patient: Patient
+    patient_link: patient
+    queue_btn: Queue
+    submit: Process
+    title: 'New report'
+pagination:
+    aria: 'Page navigation'
+patient:
+    admin_delete: 'Delete patient'
+    admin_delete_blocked: 'This patient still has reports. Delete every report first (storage is cleaned when a report is removed).'
+    admin_delete_confirm: 'Permanently delete this patient record? This cannot be undone.'
+    admin_rep_deleted: 'The report was removed and its files were deleted from storage.'
+    all: 'All patients'
+    back: Back
+    birth: 'Birth date'
+    charts_cobb_aria: 'Line chart of Cobb angles over time'
+    charts_cobb_title: 'Cobb angles over time'
+    charts_help: 'Charts include only completed reports. Hover the lines to see exact values; legend toggles individual series.'
+    charts_sub: '%n% completed exam(s) plotted in chronological order'
+    charts_title: 'Patient timeline'
+    charts_vitals_aria: 'Line chart of patient height and weight over time'
+    charts_vitals_title: 'Height and weight over time'
+    charts_yaxis_deg: 'Degrees (°)'
+    col_created: Created
+    col_curve: Curve
+    col_dh: 'Δ H vs prior'
+    col_dw: 'Δ W vs prior'
+    col_err: Error
+    col_h: Height
+    col_lum: 'Lumbar °'
+    col_max: 'Max Cobb'
+    col_report: Report
+    col_status: Status
+    col_tor: 'Thoracic °'
+    col_w: Weight
+    delta_strong: 'Δ vs prior'
+    delta_text: 'compares each report to the next-older exam (same patient).'
+    details: 'Patient details'
+    empty: 'No reports match these filters.'
+    err_missing_id: 'Missing patient id'
+    err_not_found: 'Patient not found'
+    filter_title: 'Report filters'
+    gender: Gender
+    id: 'Patient ID'
+    last_h: 'Last height (cm)'
+    last_w: 'Last weight (kg)'
+    new_report: 'New report'
+    page_of: 'Page %page% of %total%'
+    per_page_n: '%n% per page'
+    reports: Reports
+    reports_count_rows: ' · rows %from%–%to%'
+    reports_count_wrap: '(%n% match%rows% · %newest%)'
+    reports_sub: 'newest first'
+    tax: 'Tax code'
+    title: 'Patient · %name%'
+    unit_cm: ' cm'
+    unit_kg: ' kg'
+    view: View
+patients:
+    admin_patient_deleted: 'Patient was deleted.'
+    apply: Apply
+    clear: Clear
+    col_birth: 'Birth date'
+    col_gender: Gender
+    col_h: 'Last H (cm)'
+    col_id: ID
+    col_name: Name
+    col_surname: Surname
+    col_tax: 'Tax code'
+    col_w: 'Last W (kg)'
+    create: 'Create patient'
+    err_birth: 'Enter a valid birth date.'
+    err_create: 'Could not create the patient. Try again or contact support.'
+    err_gender: 'Invalid gender selection.'
+    err_name_len: 'First and last name must be at most 191 characters.'
+    err_name_required: 'First name and surname are required.'
+    err_tax_len: 'Tax code must be at most 32 characters.'
+    err_tax_required: 'Tax code is required.'
+    filter_vitals: 'Filter by last recorded vitals'
+    gender_f: Female
+    gender_m: Male
+    gender_nb: Non-binary
+    ht_max: 'Last height (cm) max'
+    ht_min: 'Last height (cm) min'
+    label_birth: 'Birth date'
+    label_first: 'First name'
+    label_gender: Gender
+    label_surname: Surname
+    label_tax: 'Tax code (codice fiscale)'
+    list: 'All patients'
+    match: match
+    no_data: 'No patients yet.'
+    no_filter: 'No patients match these filters.'
+    page: 'Page %cur% of %max%'
+    per_page: '%n% per page'
+    reports: Reports
+    rows: rows
+    save: Save
+    title: Patients
+    total: total
+    wt_max: 'Last weight (kg) max'
+    wt_min: 'Last weight (kg) min'
+pdfphp:
+    title: 'View PDF'
+physicians:
+    admin: Admin
+    col_actions: Actions
+    col_created: Created
+    col_display: 'Display name'
+    col_role: Role
+    col_state: State
+    col_user: Username
+    confirm_delete: 'Soft-delete "%name%"?'
+    copied: Copied
+    copy: Copy
+    create: 'Create physician'
+    create_btn: Create
+    delete: Delete
+    err_id: 'Missing physician id.'
+    err_in_use: 'Username already in use.'
+    err_last_admin: 'Cannot delete the last remaining admin.'
+    err_not_deleted: 'Physician is not deleted.'
+    err_not_found: 'Physician not found.'
+    err_reset_self: 'You cannot generate a reset link for your own account.'
+    err_restore: 'Cannot restore: username "%name%" is already taken by an active physician.'
+    err_self_del: 'You cannot delete your own account.'
+    err_unknown: 'Unknown action.'
+    err_user: 'Username must be 3–64 chars: lowercase letters, digits, _ . -'
+    hint_pass: 'Minimum %min% characters. The physician can change it later.'
+    label_display: 'Display name (optional)'
+    label_pass: 'Initial password'
+    label_user: Username
+    list: 'All physicians'
+    ok_created: 'Created physician "%name%".'
+    ok_deleted: 'Physician "%name%" was soft-deleted.'
+    ok_reset: 'Reset link generated for "%name%". Copy and send it to the physician.'
+    ok_restored: 'Physician "%name%" was restored.'
+    reset: 'Reset link'
+    reset_link_title: 'Reset link for "%name%"'
+    reset_send: 'Send this URL to the physician. It expires in %hours% hours and can be used only once.'
+    reset_title: 'Generate one-time reset link'
+    restore: Restore
+    role_admin: admin
+    role_md: physician
+    state_active: active
+    state_del: deleted
+    title: Physicians
+    you: you
+queue:
+    all_patients: 'All patients'
+    apply: 'Apply filters'
+    clear: Clear
+    cobb_max: 'Max Cobb ° max'
+    cobb_min: 'Max Cobb ° min'
+    created_from: 'Created from'
+    created_to: 'Created to'
+    curve: 'Curve type'
+    filters: Filters
+    h_max: 'Height (cm) max'
+    h_min: 'Height (cm) min'
+    lum_max: 'Lumbar ° max'
+    lum_min: 'Lumbar ° min'
+    new_report: 'New report'
+    patient: Patient
+    ph_max: ≤
+    ph_min: ≥
+    rid: 'Report ID'
+    rid_max: 'ID max'
+    rid_min: 'ID min'
+    rid_ph: exact
+    status: Status
+    tax: 'Tax code contains'
+    tax_ph: 'e.g. RSS'
+    title: 'Report queue'
+    tor_max: 'Thoracic ° max'
+    tor_min: 'Thoracic ° min'
+    w_max: 'Weight (kg) max'
+    w_min: 'Weight (kg) min'
+queue_table:
+    col_created: Created
+    col_curve: Curve
+    col_error: Error
+    col_height: Height
+    col_id: ID
+    col_lum: 'Lumbar °'
+    col_max: 'Max Cobb'
+    col_patient: Patient
+    col_status: Status
+    col_tax: 'Tax code'
+    col_tor: 'Thoracic °'
+    col_weight: Weight
+    empty: 'No reports match these filters.'
+    match_p: matches
+    match_s: match
+    per_page: '20 per page'
+    results: Results
+    rows: rows
+    view: View
+report:
+    admin_delete: 'Delete report'
+    admin_delete_confirm: 'Permanently delete this report and remove all related files from storage (original image, computed overlay, PDFs)? This cannot be undone.'
+    admin_delete_failed: 'Could not delete the report (HTTP %code%). %detail%'
+    aria_close: Close
+    aria_comp: 'View overlay full size'
+    aria_open_pdf: 'Open PDF'
+    aria_orig: 'View original full size'
+    cannot_save_vitals: 'Could not save height / weight.'
+    cobb_lum: 'Lumbar (TL) (°)'
+    cobb_max: 'Max Cobb'
+    cobb_mt: 'MT (°)'
+    cobb_pt: 'PT (°)'
+    cobb_th: 'Thoracic (max PT/MT) (°)'
+    cobb_tl: 'TL (°)'
+    cobb_verts: 'Max vertebrae (1-based)'
+    col_created: Created
+    col_pdf: PDF
+    col_physician: Physician
+    col_title: Title
+    create_pdf: 'Create PDF'
+    curve: Curve
+    edit: Edit
+    err_id: 'Missing report id'
+    err_invalid_id: 'Invalid report id'
+    err_nf: 'Report not found'
+    exam: 'At exam'
+    h_cm: 'Height (cm)'
+    h_ph: 'e.g. 165'
+    images: Images
+    img_hint: 'Click an image for full size'
+    js_failed: Failed
+    js_orig: Original
+    js_overlay: 'Computed overlay'
+    js_poll_err: 'Could not refresh report: '
+    js_waiting: 'Waiting for automatic measurements…'
+    label_orig: Original
+    label_overlay: Overlay
+    landmarks_json_short: 'Landmarks JSON'
+    landmarks_recompute_ok: 'Landmarks were recomputed; Cobb values and the overlay image were updated.'
+    lightbox: Image
+    measurements: 'Scoliosis Measurements'
+    patient_btn: Patient
+    pdf_empty: 'No PDFs yet. Use <strong>Create PDF</strong> above to generate one from this report.'
+    pdf_section: 'PDF reports for this scan'
+    pdf_sub: '· newest first'
+    pdf_sub_page: '· page %cur% / %max%'
+    save: Save
+    status: Status
+    title: 'Report #%id%'
+    vitals: 'Height & weight'
+    vitals_error_h: 'Height (cm) must be a number.'
+    vitals_error_h_range: 'Height (cm) must be between 50 and 250.'
+    vitals_error_w: 'Weight (kg) must be a number.'
+    vitals_error_w_range: 'Weight (kg) must be between 10 and 350.'
+    vitals_saved: Saved.
+    vitals_saved_desc: 'Height and weight for this report were updated.'
+    w_kg: 'Weight (kg)'
+    w_ph: 'e.g. 58.5'
+reset:
+    back_sign_in: 'Back to sign in'
+    btn_set: 'Set password'
+    error_mismatch: 'Passwords do not match.'
+    error_token: 'This link is invalid, expired, or already used. Ask the administrator for a new one.'
+    for_user: 'Setting a new password for %name%.'
+    h1: 'Reset password'
+    heading: 'Set a new password'
+    label_confirm: 'Confirm new password'
+    label_new: 'New password'
+    min_chars: 'Minimum %min% characters.'
+    sign_in_link: 'sign in'
+    submit: 'Update password'
+    success_lead: 'Password updated. You can now'
+    title: 'Reset password · Scolioware'
+status:
+    completed: completed
+    failed: failed
+    pending: pending
+    processing: processing

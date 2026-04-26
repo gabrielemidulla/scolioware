@@ -1,0 +1,131 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'edit.title'|trans({'%id%': id}) }}{% endblock %}
+
+{% set patient_crumb = row.last_name ~ ', ' ~ row.first_name %}
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'crumb.patients'|trans, href: path('patients') },
+    { label: patient_crumb, href: path('patient', {id: row.patient_id}) },
+    { label: 'report.title'|trans({'%id%': id}), href: path('report', {id: id}) },
+    { label: 'edit.breadcrumb'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-pen-ruler"></i> {{ 'edit.heading'|trans }}
+{% endset %}
+{% set topbar_actions %}
+    <a href="{{ back_or('queue.php')|e('html_attr') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left fa-fw"></i> {{ 'common.back'|trans }}
+    </a>
+    <a href="{{ back_preserve(path('report', {id: id})) }}" class="btn btn-secondary">
+        <i class="fa-solid fa-eye fa-fw"></i> {{ 'edit.view'|trans }}
+    </a>
+{% endset %}
+
+{% block body %}
+{% if errors is not empty %}
+    <div class="alert alert-danger"><ul class="mb-0">{% for err in errors %}<li>{{ err|e }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<div class="alert alert-info small mb-3">
+    {{ 'edit.info'|trans|raw }}
+</div>
+
+<div class="sw-card mb-3">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-file-medical"></i> {{ 'report.title'|trans({'%id%': id}) }}
+    </div>
+    <div class="sw-card-body small">
+        <p class="mb-1">
+            <strong>{{ row.first_name|e }} {{ row.last_name|e }}</strong>
+            · <code>{{ row.tax_code|e }}</code>
+        </p>
+        <p class="mb-0">{{ 'edit.status_lbl'|trans }}:
+            <span class="{{ sw_status_class(row.status) }}">
+                {{ sw_status_icon_markup(row.status)|raw }}
+                <span class="sw-status-text">{{ ('status.' ~ row.status)|trans }}</span>
+            </span>
+        </p>
+    </div>
+</div>
+
+<div class="sw-card">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-sliders"></i> {{ 'edit.manual'|trans }}
+    </div>
+    <div class="sw-card-body">
+        <form method="post" action="{{ path('report_edit_metrics', {id: id}) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <input type="hidden" name="report_id" value="{{ id }}">
+            <input type="hidden" name="back" value="{{ (back_raw ?? '')|e('html_attr') }}">
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'edit.curve'|trans }}</label>
+                    <select class="form-select" name="curve_type">
+                        <option value=""{% if form.curve_type == '' %} selected{% endif %}>{{ 'edit.curve_null'|trans }}</option>
+                        <option value="C"{% if form.curve_type == 'C' %} selected{% endif %}>{{ 'edit.curve_c'|trans }}</option>
+                        <option value="S"{% if form.curve_type == 'S' %} selected{% endif %}>{{ 'edit.curve_s'|trans }}</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'edit.region'|trans }}</label>
+                    <input class="form-control" name="cobb_max_region" maxlength="8"
+                           value="{{ form.cobb_max_region|e('html_attr') }}"
+                           placeholder="{{ 'edit.region_ph'|trans|e('html_attr') }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'edit.max_deg'|trans }}</label>
+                    <input class="form-control" name="cobb_max_deg" inputmode="decimal"
+                           value="{{ form.cobb_max_deg|e('html_attr') }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'edit.pt'|trans }}</label>
+                    <input class="form-control" name="cobb_pt_deg" inputmode="decimal"
+                           value="{{ form.cobb_pt_deg|e('html_attr') }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'edit.mt'|trans }}</label>
+                    <input class="form-control" name="cobb_mt_deg" inputmode="decimal"
+                           value="{{ form.cobb_mt_deg|e('html_attr') }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ 'edit.tl'|trans }}</label>
+                    <input class="form-control" name="cobb_tl_deg" inputmode="decimal"
+                           value="{{ form.cobb_tl_deg|e('html_attr') }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'edit.thor'|trans }}</label>
+                    <input class="form-control" name="cobb_thoracic_deg" inputmode="decimal"
+                           value="{{ form.cobb_thoracic_deg|e('html_attr') }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'edit.lum'|trans }}</label>
+                    <input class="form-control" name="cobb_lumbar_deg" inputmode="decimal"
+                           value="{{ form.cobb_lumbar_deg|e('html_attr') }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'edit.vsup'|trans }}</label>
+                    <input class="form-control" name="cobb_max_vert_superior" inputmode="numeric"
+                           value="{{ form.cobb_max_vert_superior|e('html_attr') }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ 'edit.vinf'|trans }}</label>
+                    <input class="form-control" name="cobb_max_vert_inferior" inputmode="numeric"
+                           value="{{ form.cobb_max_vert_inferior|e('html_attr') }}">
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk fa-fw"></i> {{ 'edit.save'|trans }}
+                </button>
+                <a href="{{ back_or('queue.php')|e('html_attr') }}" class="btn btn-secondary">{{ 'edit.cancel'|trans }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

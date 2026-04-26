@@ -1,0 +1,495 @@
+# Message ids use dot notation (e.g. common.brand). Nested keys are joined with "." when loaded.
+# Example: common → brand → catalogue id "common.brand".
+account:
+    error_current: 'La password attuale non è corretta.'
+    error_mismatch: 'Le nuove password non coincidono.'
+    label_confirm: 'Conferma nuova password'
+    label_current: 'Password attuale'
+    label_new: 'Nuova password'
+    min_help: 'Almeno %min% caratteri.'
+    must_change_notice: 'È necessario impostare una nuova password per continuare (obbligatorio al primo accesso con password temporanea).'
+    submit: 'Aggiorna password'
+    success: 'Password aggiornata.'
+    title: 'Cambia password'
+auth:
+    password_min: 'La password deve contenere almeno %min% caratteri.'
+    password_pwned: 'Questa password compare in violazioni di dati note. Sceglierne un''altra.'
+common:
+    all: Tutti
+    back: Indietro
+    brand: Scolioware
+    brand_suffix: '· Scolioware'
+    close: Chiudi
+    dash: —
+    patient: Paziente
+    queue: Coda
+    report: Referto
+    save: Salva
+crumb:
+    aria: 'Percorso di navigazione'
+    create_pdf: 'Crea PDF'
+    dashboard: Dashboard
+    patients: Pazienti
+    report_queue: 'Coda referti'
+    revise_metrics: 'Correggi metriche'
+curve:
+    filter_all: Tutte
+    opt_c: 'C (singola)'
+    opt_s: 'S (doppia)'
+    opt_unspecified: 'Non classificata'
+edit:
+    breadcrumb: 'Correggi misure'
+    cancel: Annulla
+    cannot: 'Correzione non possibile'
+    curve: 'Tipo di curva'
+    curve_c: 'C — curva singola'
+    curve_null: 'Non classificata (NULL)'
+    curve_s: 'S — doppia curva'
+    err_curve: 'La curva deve essere vuota, C o S.'
+    err_id: 'ID referto mancante'
+    err_nf: 'Referto non trovato'
+    err_num: 'Numero non valido per %field%.'
+    err_region_ch: 'La regione Cobb contiene caratteri non ammessi.'
+    err_region_len: 'La regione Cobb max: max 8 caratteri.'
+    err_vi: 'L’indice della vertebra inferiore deve essere un intero o vuoto.'
+    err_vs: 'L’indice della vertebra superiore deve essere un intero o vuoto.'
+    heading: 'Cobb e curva'
+    info: 'Usa questo modulo se la misurazione automatica <strong>fallita</strong> o ha prodotto <strong>angoli errati</strong>. I valori vengono salvati sul referto, nel pannello e nei PDF generati.'
+    landmarks_err_auth: 'Devi essere autenticato per modificare i landmark.'
+    landmarks_err_inf: "Il servizio di inferenza non ha risposto. Verificare che lo stack sia attivo e che il container <code>inference</code> sia raggiungibile dal container <code>php</code> sulla rete Docker."
+    landmarks_err_json: 'JSON non valido. Inserire un unico array JSON di numeri.'
+    landmarks_err_len: "L'array JSON deve avere almeno 136 valori numerici; ogni vertebra contribuisce 8 numeri (4 punti d'angolo × 2 coordinate)."
+    landmarks_json_lbl: 'Landmark piatti (array JSON)'
+    landmarks_json_ph: '[ x0, y0, x1, y1, … ] — array JSON di numeri (≥ 136 per 17 vertebre × 4 angoli)'
+    landmarks_recompute_btn: 'Ricalcola e salva'
+    landmarks_recompute_h: 'Ricalcolo da punti landmark'
+    landmarks_recompute_p: "Invia l'elenco <code>landmarks</code> piatto (array JSON con almeno 136 numeri, 8 per vertebra) per ricalcolare angoli di Cobb, tipo di curva e l'immagine overlay. Uso avanzato dopo modifica manuale rispetto all'output automatico."
+    landmarks_visual_link: 'Apri il referto per modificare i landmark sull’immagine (editor visuale).'
+    lum: 'Lombare / TL (°)'
+    manual: 'Valori manuali'
+    max_deg: 'Cobb max (°)'
+    mt: 'MT (°)'
+    pt: 'PT (°)'
+    region: 'Regione Cobb max'
+    region_ph: 'es. THORACIC'
+    save: 'Salva metriche'
+    status_lbl: Stato
+    thor: 'Toracica (max PT/MT) (°)'
+    title: 'Correggi metriche · Referto #%id%'
+    tl: 'TL (°)'
+    view: 'Vista referto'
+    vinf: 'Vertebra inferiore Cobb max (1-based)'
+    vsup: 'Vertebra superiore Cobb max (1-based)'
+    warn: 'Cobb e tipo di curva si possono correggere solo per referti <strong>completati</strong> o <strong>falliti</strong>. Stato attuale: <code>%status%</code>.'
+error:
+    csrf: 'Token CSRF non valido.'
+    csrf_reload: Ricarica
+    forbidden_admin: 'Accesso negato — solo amministratori.'
+    invalid_report_id: 'ID referto non valido'
+    missing_patient_id: 'ID paziente mancante'
+    missing_pdf_id: 'ID PDF mancante'
+    missing_report_id: 'ID referto mancante'
+    missing_report_id_param: 'report_id mancante'
+    patient_not_found: 'Paziente non trovato'
+    pdf_download: 'Impossibile generare l’URL di download. Riprova tra poco.'
+    pdf_not_found: 'PDF non trovato'
+    pdf_stream: 'Impossibile caricare il PDF. Riprova tra poco.'
+    report_image_fetch: 'Impossibile caricare l’immagine. Riprovare o contattare l’amministratore.'
+    report_image_param: 'Parametri immagine mancanti o non validi.'
+    report_not_found: 'Referto non trovato'
+field:
+    cobb_lumbar_deg: 'cobb lombare'
+    cobb_max_deg: 'cobb max'
+    cobb_mt_deg: 'cobb MT'
+    cobb_pt_deg: 'cobb PT'
+    cobb_thoracic_deg: 'cobb toracica'
+    cobb_tl_deg: 'cobb TL'
+footer:
+    app_line: 'Scolioware · Pannello'
+gender:
+    female: femmina
+    male: maschio
+    non_binary: 'non binario'
+index:
+    db_card: Database
+    db_error: Errore
+    db_error_detail: 'Impossibile contattare il database. Controllare i log del server per i dettagli.'
+    db_ok: Connesso
+    new_report_btn: 'Nuovo referto'
+    title: Dashboard
+lang:
+    en: English
+    it: Italiano
+    label: Lingua
+    switcher_aria: Lingua
+    title: 'Lingua di visualizzazione'
+llm:
+    confirm_regen: 'Generare una nuova bozza? La precedente resterà nel registro di audit.'
+    empty: 'Nessuna bozza ancora. Clicca <em>Genera</em> per chiedere al modello una breve descrizione di questa lastra.'
+    err_auth: "Effettua l'accesso per usare questa funzione."
+    err_body: 'Corpo della richiesta non valido.'
+    err_gen: 'Generazione fallita:'
+    err_inf: 'Servizio di inferenza non raggiungibile.'
+    err_load: "Impossibile caricare l'ultima bozza."
+    err_status: 'La bozza è disponibile solo a referto completato (stato: %status%).'
+    generate: Genera
+    generating: 'Generazione in corso… può richiedere 30 – 120 secondi su CPU.'
+    help: "Una breve lettura iniziale dell'X-ray generata dall'AI per orientarti prima di analizzare le misure. <strong>Non è una diagnosi</strong> — verifica sempre prima di citarla."
+    meta: '{model} · {when} · {secs}s'
+    queued: 'In coda — in attesa che il worker LLM prenda il job…'
+    regenerate: Rigenera
+    running: 'In esecuzione sul worker LLM… può richiedere 30 – 120 secondi su CPU.'
+    title: 'Descrizione preliminare AI'
+lmk:
+    add: 'Aggiungi vertebra'
+    confirm_close: 'Hai modifiche non salvate ai landmark. Chiudere comunque?'
+    confirm_reset: 'Scartare le modifiche e ricaricare i landmark attuali?'
+    count: '%n% vertebre'
+    err_konva: 'Impossibile caricare la libreria Konva (rete bloccata?).'
+    err_load: "Impossibile caricare l'immagine originale."
+    err_min: 'Servono almeno 2 vertebre per calcolare il Cobb.'
+    err_no_orig: 'Nessun elenco landmark salvato per questo referto (servono almeno 136 numeri: 17 vertebre × 4 angoli × x,y). Attendi l’elaborazione, incolla il JSON in «Correggi misure» o riprova dopo un run fallito con output salvato.'
+    help: "Trascina uno dei quattro punti d'angolo di ciascuna vertebra per correggere il modello. Usa <strong>Aggiungi</strong> per inserire una vertebra sotto quella selezionata (o in coda), <strong>Rimuovi</strong> per eliminare quella selezionata e <strong>Salva</strong> per ricalcolare gli angoli di Cobb sul server. L'output originale del modello rimane tracciato nello storico revisioni."
+    open_btn: 'Modifica landmark'
+    remove: 'Rimuovi selezionata'
+    reset: 'Annulla modifiche'
+    save: 'Ricalcola e salva'
+    save_ok: 'Ricalcolato. Aggiornamento overlay…'
+    saving: 'Ricalcolo in corso…'
+    title: 'Modifica punti landmark'
+login:
+    error_invalid: 'Username o password non validi.'
+    error_locked: 'Troppi tentativi di accesso. Attendere qualche minuto e riprovare.'
+    error_required: 'Inserire username e password.'
+    heading: Accedi
+    help_reset: 'Password dimenticata? Chiedi all’amministratore un link di reimpostazione.'
+    label_password: Password
+    label_username: 'Nome utente'
+    page_title: 'Accedi · Scolioware'
+    submit: Accedi
+nav:
+    admin_badge: (admin)
+    change_password: 'Cambia password'
+    dashboard: Dashboard
+    logout: Esci
+    new_report: 'Nuovo referto'
+    patients: Pazienti
+    physicians: Medici
+    report_queue: 'Coda referti'
+    section:
+        account: Account
+        main: Principale
+new_pdf:
+    content: 'Contenuto PDF'
+    default_title: 'Referto #%rid% — %surname%, %name%'
+    err_notes_len: 'Note troppo lunghe (max 50000 caratteri).'
+    err_render: 'Generazione PDF: '
+    err_title: 'Impossibile creare il PDF.'
+    err_title_len: 'Titolo troppo lungo (max 200 caratteri).'
+    err_upload: 'Caricamento PDF non riuscito.'
+    generate: 'Genera e salva PDF'
+    heading: 'Crea referto PDF'
+    hint_notes: 'Testo semplice. Gli a capo vengono mantenuti.'
+    hint_title: 'Se lasciato vuoto, viene usato un’intestazione paziente + referto.'
+    include_img: 'Includi l’immagine in sovrapposizione (RX + landmark)'
+    label_title: Titolo
+    notes: 'Note cliniche'
+    notes_ph: 'Impressione clinica, follow-up, piano terapeutico…'
+    source: 'Referto sorgente'
+    sub_curve: Curva
+    sub_hexam: 'Altezza (esame)'
+    sub_lum: Lombare
+    sub_max: 'Cobb max'
+    sub_patient: Paziente
+    sub_report: Referto
+    sub_status: Stato
+    sub_tor: Toracica
+    sub_wexam: 'Peso (esame)'
+    title: 'Crea PDF · Referto #%id%'
+    warn_incomplete: 'Nota: il referto è <strong>%status%</strong>. Il riepilogo Cobb può essere incompleto e l’immagine in sovrapposizione può mancare.'
+new_report:
+    card: 'Elabora esame'
+    empty: 'Crea prima un %patient_link%, poi torna per elaborare l’esame.'
+    heading: 'Nuovo referto radiografico'
+    js_error: 'Errore %code%: %detail%'
+    js_error_404: ' — Se vedi "Not Found", ricostruisci il servizio (docker compose build inference && docker compose up -d inference).'
+    js_pick: 'Scegli un’immagine.'
+    js_queued: 'Referto %id% inviato. Reindirizzamento…'
+    label_image: 'Immagine radiografica (JPEG/PNG) o DICOM ( .dcm )'
+    label_patient: Paziente
+    patient_link: paziente
+    queue_btn: Coda
+    submit: Elabora
+    title: 'Nuovo referto'
+pagination:
+    aria: 'Navigazione pagine'
+patient:
+    admin_delete: 'Elimina paziente'
+    admin_delete_blocked: 'Questo paziente ha ancora referti. Eliminare prima tutti i referti (lo storage viene ripulito alla rimozione di ogni referto).'
+    admin_delete_confirm: 'Eliminare definitivamente questo paziente? Operazione irreversibile.'
+    admin_rep_deleted: 'Il referto è stato rimosso e i relativi file sono stati eliminati dallo storage.'
+    all: 'Tutti i pazienti'
+    back: Indietro
+    birth: 'Data nascita'
+    charts_cobb_aria: 'Grafico a linee degli angoli di Cobb nel tempo'
+    charts_cobb_title: 'Angoli di Cobb nel tempo'
+    charts_help: 'I grafici includono solo i referti completati. Passa il mouse sulle linee per i valori esatti; usa la legenda per attivare/disattivare le serie.'
+    charts_sub: '%n% esame/i completato/i in ordine cronologico'
+    charts_title: 'Cronologia paziente'
+    charts_vitals_aria: 'Grafico a linee dell’altezza e del peso del paziente nel tempo'
+    charts_vitals_title: 'Altezza e peso nel tempo'
+    charts_yaxis_deg: 'Gradi (°)'
+    col_created: Creato
+    col_curve: Curva
+    col_dh: 'Δ altez. vs prec.'
+    col_dw: 'Δ peso vs prec.'
+    col_err: Errore
+    col_h: Altezza
+    col_lum: 'Lomb. °'
+    col_max: 'Cobb max'
+    col_report: Referto
+    col_status: Stato
+    col_tor: 'Torac. °'
+    col_w: Peso
+    delta_strong: 'Δ vs precedente'
+    delta_text: 'confronta ogni referto con l’esame precedente (stesso paziente).'
+    details: 'Dettagli paziente'
+    empty: 'Nessun referto con questi filtri.'
+    err_missing_id: 'ID paziente mancante'
+    err_not_found: 'Paziente non trovato'
+    filter_title: 'Filtri referti'
+    gender: Sesso
+    id: 'ID paziente'
+    last_h: 'Ultima altezza (cm)'
+    last_w: 'Ultimo peso (kg)'
+    new_report: 'Nuovo referto'
+    page_of: 'Pagina %page% di %total%'
+    per_page_n: '%n% per pagina'
+    reports: Referti
+    reports_count_rows: ' · righe %from%–%to%'
+    reports_count_wrap: '(%n% corrispondenze%rows% · %newest%)'
+    reports_sub: 'più recenti prima'
+    tax: 'Cod. fiscale'
+    title: 'Paziente · %name%'
+    unit_cm: ' cm'
+    unit_kg: ' kg'
+    view: Apri
+patients:
+    admin_patient_deleted: 'Paziente eliminato.'
+    apply: Applica
+    clear: Azzera
+    col_birth: 'Data nascita'
+    col_gender: Sesso
+    col_h: 'Altez. ult. (cm)'
+    col_id: ID
+    col_name: Nome
+    col_surname: Cognome
+    col_tax: 'Cod. fiscale'
+    col_w: 'Peso ult. (kg)'
+    create: 'Nuovo paziente'
+    err_birth: 'Inserire una data di nascita valida.'
+    err_create: 'Impossibile creare il paziente. Riprovare o contattare il supporto.'
+    err_gender: 'Selezione del sesso non valida.'
+    err_name_len: 'Nome e cognome devono essere al massimo 191 caratteri.'
+    err_name_required: 'Nome e cognome sono obbligatori.'
+    err_tax_len: 'Il codice fiscale deve essere al massimo 32 caratteri.'
+    err_tax_required: 'Il codice fiscale è obbligatorio.'
+    filter_vitals: 'Filtra per ultimi segni vitali'
+    gender_f: Femmina
+    gender_m: Maschio
+    gender_nb: 'Non binario'
+    ht_max: 'Altezza ult. (cm) max'
+    ht_min: 'Altezza ult. (cm) min'
+    label_birth: 'Data di nascita'
+    label_first: Nome
+    label_gender: Sesso
+    label_surname: Cognome
+    label_tax: 'Codice fiscale'
+    list: 'Tutti i pazienti'
+    match: corrispondenze
+    no_data: 'Nessun paziente.'
+    no_filter: 'Nessun paziente con questi filtri.'
+    page: 'Pagina %cur% di %max%'
+    per_page: '%n% per pagina'
+    reports: Referti
+    rows: righe
+    save: Salva
+    title: Pazienti
+    total: totali
+    wt_max: 'Peso ult. (kg) max'
+    wt_min: 'Peso ult. (kg) min'
+pdfphp:
+    title: 'Scarica PDF'
+physicians:
+    admin: Amministratore
+    col_actions: Azioni
+    col_created: Creato
+    col_display: Nome
+    col_role: Ruolo
+    col_state: Stato
+    col_user: Username
+    confirm_delete: 'Eliminare (soft) «%name%»?'
+    copied: Copiato
+    copy: Copia
+    create: 'Nuovo medico'
+    create_btn: Crea
+    delete: Elimina
+    err_id: 'ID medico mancante.'
+    err_in_use: 'Username già in uso.'
+    err_last_admin: 'Impossibile eliminare l’ultimo amministratore.'
+    err_not_deleted: 'Il medico non è eliminato.'
+    err_not_found: 'Medico non trovato.'
+    err_reset_self: 'Non puoi generare un link di reset per il tuo account.'
+    err_restore: 'Impossibile ripristinare: l’username «%name%» è già usato da un medico attivo.'
+    err_self_del: 'Non puoi eliminare il tuo account.'
+    err_unknown: 'Azione sconosciuta.'
+    err_user: 'Username: 3–64 caratteri, lettere minuscole, cifre, _ . -'
+    hint_pass: 'Almeno %min% caratteri. Il medico potrà cambiarla.'
+    label_display: 'Nome visualizzato (opz.)'
+    label_pass: 'Password iniziale'
+    label_user: 'Nome utente'
+    list: 'Tutti i medici'
+    ok_created: 'Creato medico «%name%».'
+    ok_deleted: 'Medico «%name%» archiviato (soft-delete).'
+    ok_reset: 'Generato link di reset per «%name%». Copialo e invialo al medico.'
+    ok_restored: 'Medico «%name%» ripristinato.'
+    reset: 'Link reimpostazione'
+    reset_link_title: 'Link reimpostazione per «%name%»'
+    reset_send: 'Invia questo URL al medico. Scade tra %hours% ore e funziona una sola volta.'
+    reset_title: 'Genera link monouso per reimpostare la password'
+    restore: Ripristina
+    role_admin: admin
+    role_md: medico
+    state_active: attivo
+    state_del: eliminato
+    title: Medici
+    you: tu
+queue:
+    all_patients: 'Tutti i pazienti'
+    apply: 'Applica filtri'
+    clear: Azzera
+    cobb_max: 'Cobb max ° max'
+    cobb_min: 'Cobb max ° min'
+    created_from: 'Creato dal'
+    created_to: 'Creato al'
+    curve: 'Tipo curva'
+    filters: Filtri
+    h_max: 'Altezza (cm) max'
+    h_min: 'Altezza (cm) min'
+    lum_max: 'Lombare ° max'
+    lum_min: 'Lombare ° min'
+    new_report: 'Nuovo referto'
+    patient: Paziente
+    ph_max: ≤
+    ph_min: ≥
+    rid: 'ID referto'
+    rid_max: 'ID max'
+    rid_min: 'ID min'
+    rid_ph: esatto
+    status: Stato
+    tax: 'Cod. fiscale contiene'
+    tax_ph: 'es. RSS'
+    title: 'Coda referti'
+    tor_max: 'Toracica ° max'
+    tor_min: 'Toracica ° min'
+    w_max: 'Peso (kg) max'
+    w_min: 'Peso (kg) min'
+queue_table:
+    col_created: Creato
+    col_curve: Curva
+    col_error: Errore
+    col_height: Altezza
+    col_id: ID
+    col_lum: 'Lomb. °'
+    col_max: 'Cobb max'
+    col_patient: Paziente
+    col_status: Stato
+    col_tax: 'Cod. fiscale'
+    col_tor: 'Torac. °'
+    col_weight: Peso
+    empty: 'Nessun referto con questi filtri.'
+    match_p: corrispondenze
+    match_s: corrispondenza
+    per_page: '20 per pagina'
+    results: Risultati
+    rows: righe
+    view: Apri
+report:
+    admin_delete: 'Elimina referto'
+    admin_delete_confirm: 'Eliminare definitivamente questo referto e tutti i file correlati dallo storage (immagine originale, overlay calcolato, PDF)? Operazione irreversibile.'
+    admin_delete_failed: 'Impossibile eliminare il referto (HTTP %code%). %detail%'
+    aria_close: Chiudi
+    aria_comp: 'Vedi sovrapposizione a schermo intero'
+    aria_open_pdf: 'Apri PDF'
+    aria_orig: 'Vedi originale a schermo intero'
+    cannot_save_vitals: 'Impossibile salvare altezza / peso.'
+    cobb_lum: 'Lombare (TL) (°)'
+    cobb_max: 'Cobb max'
+    cobb_mt: 'MT (°)'
+    cobb_pt: 'PT (°)'
+    cobb_th: 'Toracica (max PT/MT) (°)'
+    cobb_tl: 'TL (°)'
+    cobb_verts: 'Vertebre max (1-based)'
+    col_created: Creato
+    col_pdf: PDF
+    col_physician: Medico
+    col_title: Titolo
+    create_pdf: 'Crea PDF'
+    curve: Curva
+    edit: Modifica
+    err_id: 'ID referto mancante'
+    err_invalid_id: 'ID referto non valido'
+    err_nf: 'Referto non trovato'
+    exam: All’esame
+    h_cm: 'Altezza (cm)'
+    h_ph: 'es. 165'
+    images: Immagini
+    img_hint: 'Clic sull’immagine per ingrandire'
+    js_failed: Fallito
+    js_orig: Originale
+    js_overlay: 'Sovrapposizione calcolata'
+    js_poll_err: 'Impossibile aggiornare il referto: '
+    js_waiting: 'In attesa delle misurazioni automatiche…'
+    label_orig: Originale
+    label_overlay: Sovrapposizione
+    landmarks_json_short: 'JSON landmark'
+    landmarks_recompute_ok: 'I punti sono stati ricalcolati: angoli di Cobb, tipo di curva e immagine overlay aggiornati.'
+    lightbox: Immagine
+    measurements: 'Misure (scoliosi)'
+    patient_btn: Paziente
+    pdf_empty: 'Nessun PDF. Usa <strong>Crea PDF</strong> sopra per generarlo da questo referto.'
+    pdf_section: 'PDF di questo referto'
+    pdf_sub: '· più recenti prima'
+    pdf_sub_page: '· pag. %cur% / %max%'
+    save: Salva
+    status: Stato
+    title: 'Referto #%id%'
+    vitals: 'Altezza e peso'
+    vitals_error_h: 'L’altezza (cm) deve essere un numero.'
+    vitals_error_h_range: 'L’altezza (cm) deve essere tra 50 e 250.'
+    vitals_error_w: 'Il peso (kg) deve essere un numero.'
+    vitals_error_w_range: 'Il peso (kg) deve essere tra 10 e 350.'
+    vitals_saved: Salvato.
+    vitals_saved_desc: 'Altezza e peso del referto sono stati aggiornati.'
+    w_kg: 'Peso (kg)'
+    w_ph: 'es. 58,5'
+reset:
+    back_sign_in: 'Torna all’accesso'
+    btn_set: 'Imposta password'
+    error_mismatch: 'Le password non coincidono.'
+    error_token: 'Questo link non è valido, è scaduto o è già stato usato. Chiedine uno nuovo all’amministratore.'
+    for_user: 'Impostazione di una nuova password per %name%.'
+    h1: 'Reimposta password'
+    heading: 'Imposta una nuova password'
+    label_confirm: 'Conferma nuova password'
+    label_new: 'Nuova password'
+    min_chars: 'Almeno %min% caratteri.'
+    sign_in_link: accedere
+    submit: 'Aggiorna password'
+    success_lead: 'Password aggiornata. Ora puoi'
+    title: 'Reimposta password · Scolioware'
+status:
+    completed: completato
+    failed: fallito
+    pending: 'in attesa'
+    processing: 'in elaborazione'

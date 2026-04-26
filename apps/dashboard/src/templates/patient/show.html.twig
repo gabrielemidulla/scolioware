@@ -1,0 +1,437 @@
+{% extends 'layout/sidebar_shell.html.twig' %}
+
+{% block html_title %}{{ 'patient.title'|trans({'%name%': patient_display_name}) }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'crumb.patients'|trans, href: path('patients') },
+    { label: patient_display_name },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-user-injured"></i> {{ patient.first_name|e }} {{ patient.last_name|e }}
+{% endset %}
+{% set topbar_actions %}
+    {% if has_back %}
+        <a href="{{ top_back_href|e('html_attr') }}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left fa-fw"></i> {{ 'patient.back'|trans }}
+        </a>
+    {% else %}
+        <a href="{{ path('patients') }}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left fa-fw"></i> {{ 'patient.all'|trans }}
+        </a>
+    {% endif %}
+    <a href="{{ back_append(path('new_report')) }}" class="btn btn-primary">
+        <i class="fa-solid fa-file-circle-plus fa-fw"></i> {{ 'patient.new_report'|trans }}
+    </a>
+    {% if is_admin and patient_report_count_all == 0 %}
+        <form method="post" class="d-inline ms-1" onsubmit="return confirm({{ 'patient.admin_delete_confirm'|trans|json_encode(261)|raw }});">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <input type="hidden" name="patient_id" value="{{ id }}">
+            <button type="submit" name="admin_delete_patient" value="1" class="btn btn-danger">
+                <i class="fa-solid fa-user-slash fa-fw"></i> {{ 'patient.admin_delete'|trans }}
+            </button>
+        </form>
+    {% endif %}
+{% endset %}
+
+{% block body %}
+{% set nd = 'common.dash'|trans %}
+{% if report_deleted_ok %}
+    <div class="alert alert-success mb-3" role="alert">{{ 'patient.admin_rep_deleted'|trans }}</div>
+{% endif %}
+{% if flash_patient_delete_fail != '' %}
+    <div class="alert alert-danger mb-3" role="alert">{{ flash_patient_delete_fail|e }}</div>
+{% endif %}
+
+<div class="sw-card mb-3">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-id-card"></i> {{ 'patient.details'|trans }}
+    </div>
+    <div class="sw-card-body">
+        <div class="row g-2 small">
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.id'|trans }}</span><br><strong>#{{ patient.id }}</strong></div>
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.tax'|trans }}</span><br><code>{{ patient.tax_code|e }}</code></div>
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.birth'|trans }}</span><br>{{ patient.birth_date|e }}</div>
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.gender'|trans }}</span><br>{{ gender_label|e }}</div>
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.last_h'|trans }}</span><br>{% set lh = patient.last_height_cm ?? null %}{% if lh is not null and lh != '' %}<strong>{{ lh|number_format(2) }}</strong>{% else %}<span class="text-muted">{{ nd }}</span>{% endif %}</div>
+            <div class="col-md-3"><span class="text-muted">{{ 'patient.last_w'|trans }}</span><br>{% set lw = patient.last_weight_kg ?? null %}{% if lw is not null and lw != '' %}<strong>{{ lw|number_format(2) }}</strong>{% else %}<span class="text-muted">{{ nd }}</span>{% endif %}</div>
+        </div>
+    </div>
+</div>
+
+<div class="sw-card mb-3" id="sw-patient-charts"{% if chart_rows|length == 0 %} style="display:none;"{% endif %}>
+    <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fa-solid fa-chart-line"></i> {{ 'patient.charts_title'|trans }}
+            <span class="text-muted fw-normal small ms-2">{{ 'patient.charts_sub'|trans({'%n%': chart_rows|length}) }}</span>
+        </span>
+    </div>
+    <div class="sw-card-body">
+        <div class="row g-3">
+            <div class="col-12 col-xl-6">
+                <div class="sw-chart-wrap">
+                    <canvas id="sw-chart-cobb" aria-label="{{ 'patient.charts_cobb_aria'|trans|e('html_attr') }}"></canvas>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="sw-chart-wrap">
+                    <canvas id="sw-chart-vitals" aria-label="{{ 'patient.charts_vitals_aria'|trans|e('html_attr') }}"></canvas>
+                </div>
+            </div>
+        </div>
+        <p class="small text-muted mb-0 mt-2">{{ 'patient.charts_help'|trans }}</p>
+    </div>
+</div>
+
+<div class="sw-card sw-filters mb-3">
+    <div class="sw-card-header">
+        <i class="fa-solid fa-filter"></i> {{ 'patient.filter_title'|trans }}
+    </div>
+    <div class="sw-card-body">
+        <form method="get" action="{{ path('patient') }}" class="row g-2">
+            <input type="hidden" name="id" value="{{ id }}">
+            <input type="hidden" name="page" value="1">
+            {% if back_ok and back_raw is not null %}
+                <input type="hidden" name="back" value="{{ back_raw|e('html_attr') }}">
+            {% endif %}
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.status'|trans }}</label>
+                <select class="form-select" name="status">
+                    <option value="">{{ 'common.all'|trans }}</option>
+                    {% for st in allowed_status %}
+                        <option value="{{ st|e('html_attr') }}"{% if f.status == st %} selected{% endif %}>{{ ('status.' ~ st)|trans }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.curve'|trans }}</label>
+                <select class="form-select" name="curve">
+                    <option value=""{% if f.curve == '' %} selected{% endif %}>{{ 'curve.filter_all'|trans }}</option>
+                    <option value="C"{% if f.curve == 'C' %} selected{% endif %}>{{ 'curve.opt_c'|trans }}</option>
+                    <option value="S"{% if f.curve == 'S' %} selected{% endif %}>{{ 'curve.opt_s'|trans }}</option>
+                    <option value="unspecified"{% if f.curve == 'unspecified' %} selected{% endif %}>{{ 'curve.opt_unspecified'|trans }}</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label">{{ 'queue.rid'|trans }}</label>
+                <input class="form-control" name="rid" value="{{ f.ridExact|e('html_attr') }}" placeholder="{{ 'queue.rid_ph'|trans }}" inputmode="numeric">
+            </div>
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label">{{ 'queue.rid_min'|trans }}</label>
+                <input class="form-control" name="rid_min" value="{{ f.ridMin > 0 ? f.ridMin : '' }}" placeholder="{{ 'queue.ph_min'|trans }}" inputmode="numeric">
+            </div>
+            <div class="col-6 col-md-3 col-lg-1">
+                <label class="form-label">{{ 'queue.rid_max'|trans }}</label>
+                <input class="form-control" name="rid_max" value="{{ f.ridMax > 0 ? f.ridMax : '' }}" placeholder="{{ 'queue.ph_max'|trans }}" inputmode="numeric">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.tor_min'|trans }}</label>
+                <input class="form-control" name="tor_min" value="{{ f.torMin is not null ? f.torMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.tor_max'|trans }}</label>
+                <input class="form-control" name="tor_max" value="{{ f.torMax is not null ? f.torMax : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.lum_min'|trans }}</label>
+                <input class="form-control" name="lum_min" value="{{ f.lumMin is not null ? f.lumMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.lum_max'|trans }}</label>
+                <input class="form-control" name="lum_max" value="{{ f.lumMax is not null ? f.lumMax : '' }}" inputmode="decimal">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.cobb_min'|trans }}</label>
+                <input class="form-control" name="cobb_min" value="{{ f.cobbMin is not null ? f.cobbMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.cobb_max'|trans }}</label>
+                <input class="form-control" name="cobb_max" value="{{ f.cobbMax is not null ? f.cobbMax : '' }}" inputmode="decimal">
+            </div>
+
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.h_min'|trans }}</label>
+                <input class="form-control" name="h_cm_min" value="{{ f.hCmMin is not null ? f.hCmMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.h_max'|trans }}</label>
+                <input class="form-control" name="h_cm_max" value="{{ f.hCmMax is not null ? f.hCmMax : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.w_min'|trans }}</label>
+                <input class="form-control" name="w_kg_min" value="{{ f.wKgMin is not null ? f.wKgMin : '' }}" inputmode="decimal">
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">{{ 'queue.w_max'|trans }}</label>
+                <input class="form-control" name="w_kg_max" value="{{ f.wKgMax is not null ? f.wKgMax : '' }}" inputmode="decimal">
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.created_from'|trans }}</label>
+                <input class="form-control" type="date" name="created_from" value="{{ f.createdFrom|e('html_attr') }}">
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <label class="form-label">{{ 'queue.created_to'|trans }}</label>
+                <input class="form-control" type="date" name="created_to" value="{{ f.createdTo|e('html_attr') }}">
+            </div>
+
+            <div class="col-12 d-flex flex-wrap gap-2 align-items-end mt-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-magnifying-glass fa-fw"></i> {{ 'queue.apply'|trans }}
+                </button>
+                <a href="{{ back_preserve(path('patient', {id: id})) }}" class="btn btn-secondary">
+                    <i class="fa-solid fa-xmark fa-fw"></i> {{ 'queue.clear'|trans }}
+                </a>
+            </div>
+        </form>
+        <p class="text-muted small mb-0 mt-2">
+            <strong>{{ 'patient.delta_strong'|trans }}</strong> {{ 'patient.delta_text'|trans }}
+        </p>
+    </div>
+</div>
+
+<div class="sw-card">
+    <div class="sw-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fa-solid fa-file-medical"></i> {{ 'patient.reports'|trans }}
+            <span class="text-muted fw-normal">{{ reports_line|e }}</span>
+        </span>
+        <span class="text-muted small">{{ 'patient.per_page_n'|trans({'%n%': per_page}) }}</span>
+    </div>
+    <div class="sw-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>{{ 'patient.col_report'|trans }}</th>
+                        <th>{{ 'patient.col_created'|trans }}</th>
+                        <th>{{ 'patient.col_status'|trans }}</th>
+                        <th>{{ 'patient.col_curve'|trans }}</th>
+                        <th>{{ 'patient.col_tor'|trans }}</th>
+                        <th>{{ 'patient.col_lum'|trans }}</th>
+                        <th>{{ 'patient.col_max'|trans }}</th>
+                        <th>{{ 'patient.col_h'|trans }}</th>
+                        <th>{{ 'patient.col_w'|trans }}</th>
+                        <th>{{ 'patient.col_dh'|trans }}</th>
+                        <th>{{ 'patient.col_dw'|trans }}</th>
+                        <th>{{ 'patient.col_err'|trans }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in reports %}
+                    {% set older = loop.index0 + 1 < reports|length ? reports[loop.index0 + 1] : null %}
+                    {% set dh = nd %}
+                    {% set dw = nd %}
+                    {% if older is not null %}
+                        {% set ch = r.height_cm ?? null %}
+                        {% set cw = r.weight_kg ?? null %}
+                        {% set oh = older.height_cm ?? null %}
+                        {% set ow = older.weight_kg ?? null %}
+                        {% if ch is not null and ch != '' and oh is not null and oh != '' %}
+                            {% set d = (0 + ch) - (0 + oh) %}
+                            {% set dh = (d > 0 ? '+' : '') ~ d|number_format(2) ~ unit_cm %}
+                        {% endif %}
+                        {% if cw is not null and cw != '' and ow is not null and ow != '' %}
+                            {% set d2 = (0 + cw) - (0 + ow) %}
+                            {% set dw = (d2 > 0 ? '+' : '') ~ d2|number_format(2) ~ unit_kg %}
+                        {% endif %}
+                    {% endif %}
+                    {% set curveCell = r.curve_type ?? '' %}
+                    <tr>
+                        <td><strong>#{{ r.id }}</strong></td>
+                        <td><span class="text-muted">{{ r.created_at|e }}</span></td>
+                        <td>
+                            <span class="{{ sw_status_class(r.status) }}">
+                                {{ sw_status_icon_markup(r.status)|raw }}
+                                <span class="sw-status-text">{{ ('status.' ~ r.status)|trans }}</span>
+                            </span>
+                        </td>
+                        <td>{% if curveCell == '' %}{{ nd }}{% else %}{{ curve_filter_label(curveCell)|e }}{% endif %}</td>
+                        <td>{% set v = r.cobb_thoracic_deg ?? null %}{{ v is not null and v != '' ? (0 + v)|number_format(2) : nd }}</td>
+                        <td>{% set v2 = r.cobb_lumbar_deg ?? null %}{{ v2 is not null and v2 != '' ? (0 + v2)|number_format(2) : nd }}</td>
+                        <td>{% set reg = r.cobb_max_region ?? '' %}{% set mx = r.cobb_max_deg ?? null %}{% if mx is not null and mx != '' %}{{ reg|upper|e }} {{ (0 + mx)|number_format(2) }}°{% else %}{{ nd }}{% endif %}</td>
+                        <td>{% set hc = r.height_cm ?? null %}{{ hc is not null and hc != '' ? (0 + hc)|number_format(2) ~ unit_cm : nd }}</td>
+                        <td>{% set wk = r.weight_kg ?? null %}{{ wk is not null and wk != '' ? (0 + wk)|number_format(2) ~ unit_kg : nd }}</td>
+                        <td class="small">{{ dh }}</td>
+                        <td class="small">{{ dw }}</td>
+                        <td>{% set err = r.error_message ?? '' %}{{ err|length > 60 ? err|slice(0, 57) ~ '…' : err|e }}</td>
+                        <td class="text-end">
+                            <a href="{{ back_append(path('report', {id: r.id})) }}" class="btn btn-secondary btn-sm">
+                                <i class="fa-solid fa-eye fa-fw"></i> {{ 'patient.view'|trans }}
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="13" class="text-center text-muted py-4">{{ 'patient.empty'|trans }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="p-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <span class="text-muted small">{{ 'patient.page_of'|trans({'%page%': page, '%total%': total_pages}) }}</span>
+            {% include 'partials/pagination.html.twig' with {
+                route: 'patient',
+                page: page,
+                total_pages: total_pages,
+                query: pagination_query,
+                page_param: 'page'
+            } only %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if chart_rows|length > 0 %}
+{% set chart_i18n = {
+    cobb_title: 'patient.charts_cobb_title'|trans,
+    vitals_title: 'patient.charts_vitals_title'|trans,
+    pt: 'report.cobb_pt'|trans,
+    mt: 'report.cobb_mt'|trans,
+    tl: 'report.cobb_tl'|trans,
+    max: 'report.cobb_max'|trans,
+    height: 'report.h_cm'|trans,
+    weight: 'report.w_kg'|trans,
+    angle_deg: 'patient.charts_yaxis_deg'|trans,
+    cm: 'patient.unit_cm'|trans,
+    kg: 'patient.unit_kg'|trans,
+    date: 'patient.col_created'|trans,
+    report: 'patient.col_report'|trans,
+} %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+<script>
+    window.__SS_PATIENT_CHARTS = {{ chart_data|json_encode(263)|raw }};
+    window.__SS_CHART_I18N = {{ chart_i18n|json_encode(263)|raw }};
+    document.addEventListener('DOMContentLoaded', function () {
+        function init() {
+            if (typeof Chart === 'undefined') { window.setTimeout(init, 60); return; }
+            var d = window.__SS_PATIENT_CHARTS;
+            var t = window.__SS_CHART_I18N;
+            if (!d || !d.labels || !d.labels.length) return;
+
+            var labels = d.labels.map(function (s) { return (s || '').slice(0, 10); });
+            var primary = '#0f6b6b';
+            var accent  = '#138787';
+            var amber   = '#b58900';
+            var slate   = '#586e75';
+
+            function hasAny(arr) { return arr && arr.some(function (v) { return v !== null && v !== undefined; }); }
+            function ds(label, data, color, dashed) {
+                return {
+                    label: label,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    pointBackgroundColor: color,
+                    pointBorderColor: color,
+                    spanGaps: true,
+                    tension: 0.25,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    borderDash: dashed ? [6, 4] : [],
+                };
+            }
+
+            var cobbDatasets = [];
+            if (hasAny(d.cobb_max)) cobbDatasets.push(ds(t.max, d.cobb_max, primary));
+            if (hasAny(d.cobb_pt))  cobbDatasets.push(ds(t.pt,  d.cobb_pt,  accent, true));
+            if (hasAny(d.cobb_mt))  cobbDatasets.push(ds(t.mt,  d.cobb_mt,  amber,  true));
+            if (hasAny(d.cobb_tl))  cobbDatasets.push(ds(t.tl,  d.cobb_tl,  slate,  true));
+
+            var cobbCanvas = document.getElementById('sw-chart-cobb');
+            if (cobbCanvas && cobbDatasets.length > 0) {
+                new Chart(cobbCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: cobbDatasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            title: { display: true, text: t.cobb_title },
+                            tooltip: {
+                                callbacks: {
+                                    title: function (items) {
+                                        if (!items.length) return '';
+                                        var i = items[0].dataIndex;
+                                        return t.date + ': ' + labels[i] + ' · ' + t.report + ' #' + d.rids[i];
+                                    },
+                                    label: function (item) {
+                                        if (item.parsed.y === null || item.parsed.y === undefined) return null;
+                                        return item.dataset.label + ': ' + item.parsed.y.toFixed(2) + '°';
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: t.angle_deg },
+                                ticks: { callback: function (v) { return v + '°'; } },
+                            },
+                            x: { ticks: { autoSkip: true, maxRotation: 0 } },
+                        },
+                    },
+                });
+            }
+
+            var vitalsCanvas = document.getElementById('sw-chart-vitals');
+            var vitalsDatasets = [];
+            if (hasAny(d.height_cm)) vitalsDatasets.push(Object.assign(ds(t.height, d.height_cm, primary), { yAxisID: 'yH' }));
+            if (hasAny(d.weight_kg)) vitalsDatasets.push(Object.assign(ds(t.weight, d.weight_kg, amber),   { yAxisID: 'yW' }));
+            if (vitalsCanvas && vitalsDatasets.length > 0) {
+                new Chart(vitalsCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: vitalsDatasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            title: { display: true, text: t.vitals_title },
+                            tooltip: {
+                                callbacks: {
+                                    title: function (items) {
+                                        if (!items.length) return '';
+                                        var i = items[0].dataIndex;
+                                        return t.date + ': ' + labels[i] + ' · ' + t.report + ' #' + d.rids[i];
+                                    },
+                                    label: function (item) {
+                                        if (item.parsed.y === null || item.parsed.y === undefined) return null;
+                                        var unit = item.dataset.yAxisID === 'yH' ? t.cm : t.kg;
+                                        return item.dataset.label + ': ' + item.parsed.y.toFixed(2) + unit;
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            yH: {
+                                type: 'linear',
+                                position: 'left',
+                                title: { display: true, text: t.height + ' (' + t.cm + ')' },
+                                grid: { drawOnChartArea: true },
+                            },
+                            yW: {
+                                type: 'linear',
+                                position: 'right',
+                                title: { display: true, text: t.weight + ' (' + t.kg + ')' },
+                                grid: { drawOnChartArea: false },
+                            },
+                            x: { ticks: { autoSkip: true, maxRotation: 0 } },
+                        },
+                    },
+                });
+            }
+        }
+        init();
+    });
+</script>
+{% endif %}
+{% endblock %}
