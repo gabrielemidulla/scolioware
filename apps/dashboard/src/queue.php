@@ -7,8 +7,10 @@ require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/pagination.php';
 require __DIR__ . '/inc/layout.php';
 require __DIR__ . '/inc/back.php';
+require_once __DIR__ . '/inc/phi_log.php';
 
 sv_require_auth();
+sv_phi_log('view_queue', null, null, null);
 
 $pdo = db();
 
@@ -384,7 +386,7 @@ sv_topbar(
                 return r.text();
             })
             .then(function (html) { root.innerHTML = html; })
-            .catch(function () { /* keep current table on transient errors */ });
+            .catch(function () {});
     }
     setInterval(poll, ms);
 })();

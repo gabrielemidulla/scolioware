@@ -7,6 +7,7 @@ require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/layout.php';
 require __DIR__ . '/inc/back.php';
 require __DIR__ . '/inc/pagination.php';
+require_once __DIR__ . '/inc/phi_log.php';
 
 /**
  * Match inference `refresh_patient_last_vitals`: newest report with both vitals sets patients.last_*.
@@ -118,6 +119,8 @@ if (!$row) {
     exit;
 }
 
+sv_phi_log('view_report', (int) $row['patient_id'], (int) $id, null);
+
 $canReviseMetrics = $row['status'] === 'failed' || $row['status'] === 'completed';
 $hasBack = sv_back_validate(sv_back_get_raw()) !== null;
 
@@ -171,6 +174,7 @@ if ($vitalsErrors !== []) {
 }
 
 $vitalsSavedOk = isset($_GET['vitals']) && (string) $_GET['vitals'] === 'ok';
+$landmarksRecomputeOk = isset($_GET['landmarks']) && (string) $_GET['landmarks'] === 'ok';
 
 sv_layout_start((string) __('report.title', ['id' => (string) (int) $row['id']]));
 $patientBreadcrumbLabel = $row['last_name'] . ', ' . $row['first_name'];
@@ -213,6 +217,11 @@ sv_topbar(
             ENT_QUOTES,
             'UTF-8'
         ) ?>
+    </div>
+<?php endif; ?>
+<?php if ($landmarksRecomputeOk): ?>
+    <div class="alert alert-success mb-3" role="alert">
+        <?= htmlspecialchars((string) __('report.landmarks_recompute_ok'), ENT_QUOTES, 'UTF-8') ?>
     </div>
 <?php endif; ?>
 
@@ -414,13 +423,23 @@ sv_topbar(
 
     <div class="sv-report-main-images d-flex flex-column min-h-0">
         <div class="sv-card sv-report-images-card flex-grow-1 d-flex flex-column min-h-0">
-            <div class="sv-card-header flex-shrink-0">
-                <i class="fa-solid fa-images"></i> <?= htmlspecialchars((string) __('report.images'), ENT_QUOTES, 'UTF-8') ?>
-                <span class="text-muted fw-normal small"><?= htmlspecialchars(
-                    (string) __('report.img_hint'),
-                    ENT_QUOTES,
-                    'UTF-8'
-                ) ?></span>
+            <div class="sv-card-header flex-shrink-0 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <span>
+                    <i class="fa-solid fa-images"></i> <?= htmlspecialchars((string) __('report.images'), ENT_QUOTES, 'UTF-8') ?>
+                    <span class="text-muted fw-normal small"><?= htmlspecialchars(
+                        (string) __('report.img_hint'),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ) ?></span>
+                </span>
+                <button type="button" id="open_landmark_editor" class="btn btn-sm btn-primary" style="display:none;"
+                        data-bs-toggle="modal" data-bs-target="#svLandmarkEditor">
+                    <i class="fa-solid fa-compass-drafting fa-fw"></i> <?= htmlspecialchars(
+                        (string) __('lmk.open_btn'),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ) ?>
+                </button>
             </div>
             <div class="sv-card-body flex-grow-1 d-flex flex-column min-h-0">
                 <div class="row g-2 sv-report-image-row flex-grow-1 align-items-stretch min-h-0">
@@ -468,6 +487,74 @@ sv_topbar(
     </div>
 </div><!-- /.sv-report-main-grid -->
 
+<div class="sv-card mt-3" id="llm_card" style="display:none;">
+    <div class="sv-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> <?= htmlspecialchars(
+                (string) __('llm.title'),
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?>
+        </span>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span id="llm_meta" class="text-muted small"></span>
+            <button type="button" id="llm_generate" class="btn btn-sm btn-primary">
+                <i class="fa-solid fa-wand-magic-sparkles fa-fw"></i>
+                <span id="llm_btn_label"><?= htmlspecialchars((string) __('llm.generate'), ENT_QUOTES, 'UTF-8') ?></span>
+            </button>
+        </div>
+    </div>
+    <div class="sv-card-body">
+        <p class="small text-muted mb-2"><?= (string) __('llm.help') ?></p>
+        <div id="llm_status" class="small text-muted mb-2" style="display:none;"></div>
+        <div id="llm_error" class="alert alert-danger small mb-2" role="alert" style="display:none;"></div>
+        <div id="llm_empty" class="text-muted small fst-italic"><?= htmlspecialchars(
+            (string) __('llm.empty'),
+            ENT_QUOTES,
+            'UTF-8'
+        ) ?></div>
+        <div id="llm_draft" class="sv-llm-draft" style="display:none;"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="svLandmarkEditor" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary py-2">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-compass-drafting"></i>
+                    <?= htmlspecialchars((string) __('lmk.title'), ENT_QUOTES, 'UTF-8') ?>
+                </h5>
+                <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
+                    <span id="lmk_count" class="text-muted small"></span>
+                    <button type="button" id="lmk_add" class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-square-plus fa-fw"></i> <?= htmlspecialchars((string) __('lmk.add'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                    <button type="button" id="lmk_remove" class="btn btn-sm btn-outline-light" disabled>
+                        <i class="fa-solid fa-trash-can fa-fw"></i> <?= htmlspecialchars((string) __('lmk.remove'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                    <button type="button" id="lmk_reset" class="btn btn-sm btn-outline-light">
+                        <i class="fa-solid fa-rotate-left fa-fw"></i> <?= htmlspecialchars((string) __('lmk.reset'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                    <button type="button" id="lmk_save" class="btn btn-sm btn-primary">
+                        <i class="fa-solid fa-floppy-disk fa-fw"></i> <?= htmlspecialchars((string) __('lmk.save'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars((string) __('report.aria_close'), ENT_QUOTES, 'UTF-8') ?>"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 d-flex flex-column">
+                <div id="lmk_msg" class="alert alert-warning rounded-0 mb-0 py-2 small" role="alert" style="display:none;"></div>
+                <div id="lmk_help" class="px-3 py-2 small text-muted border-bottom border-secondary">
+                    <?= (string) __('lmk.help') ?>
+                </div>
+                <div id="lmk_stage_wrap" class="flex-grow-1 d-flex align-items-center justify-content-center sv-lmk-stage-wrap">
+                    <div id="lmk_stage" class="sv-lmk-stage"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="svImgLightbox" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
         <div class="modal-content bg-dark text-white border-secondary">
@@ -510,11 +597,33 @@ $reportI18n = [
     'js_waiting' => (string) __('report.js_waiting'),
     'js_failed' => (string) __('report.js_failed'),
     'js_poll_err' => (string) __('report.js_poll_err'),
+    'lmk_count' => (string) __('lmk.count'),
+    'lmk_min' => (string) __('lmk.err_min'),
+    'lmk_no_orig' => (string) __('lmk.err_no_orig'),
+    'lmk_load_err' => (string) __('lmk.err_load'),
+    'lmk_load_konva_err' => (string) __('lmk.err_konva'),
+    'lmk_saving' => (string) __('lmk.saving'),
+    'lmk_save_ok' => (string) __('lmk.save_ok'),
+    'lmk_confirm_close' => (string) __('lmk.confirm_close'),
+    'lmk_confirm_reset' => (string) __('lmk.confirm_reset'),
+    'llm_generate' => (string) __('llm.generate'),
+    'llm_regenerate' => (string) __('llm.regenerate'),
+    'llm_generating' => (string) __('llm.generating'),
+    'llm_queued' => (string) __('llm.queued'),
+    'llm_running' => (string) __('llm.running'),
+    'llm_load_err' => (string) __('llm.err_load'),
+    'llm_gen_err' => (string) __('llm.err_gen'),
+    'llm_meta' => (string) __('llm.meta'),
+    'llm_confirm_regen' => (string) __('llm.confirm_regen'),
 ];
 ?>
 <script>
     var I18N = <?= json_encode($reportI18n, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>;
     var reportId = <?= json_encode($id) ?>;
+    var CSRF_TOKEN = <?= json_encode(sv_csrf_token()) ?>;
+    var lastReport = null;
+    var imageVersion = 0;
+    var forceImageRefresh = false;
     var STATUS_CLASS = {
         pending: 'sv-status sv-status-pending',
         processing: 'sv-status sv-status-processing',
@@ -620,21 +729,32 @@ $reportI18n = [
         try {
             var res = await fetch('/inference/reports/' + encodeURIComponent(reportId));
             var j = await res.json();
+            lastReport = j;
             setStatusBadge(document.getElementById('status'), j.status);
             document.getElementById('curve').textContent = formatCurve(j.curve_type);
             setVitals(j);
+            var editBtn = document.getElementById('open_landmark_editor');
             if (j.status === 'completed') {
                 fillCobbSummary(j);
-            }
-            var o = document.getElementById('img_orig');
-            var c = document.getElementById('img_comp');
-            if (j.presigned_original) {
-                o.src = j.presigned_original;
+                var o = document.getElementById('img_orig');
+                var c = document.getElementById('img_comp');
+                var q = 'report_image.php?report_id=' + encodeURIComponent(String(reportId)) + '&kind=';
+                if (!o.dataset.loaded) {
+                    o.src = q + 'original';
+                    o.dataset.loaded = '1';
+                }
+                if (!c.dataset.loaded || forceImageRefresh) {
+                    imageVersion += 1;
+                    c.src = q + 'computed&_v=' + imageVersion;
+                    c.dataset.loaded = '1';
+                    forceImageRefresh = false;
+                }
                 document.getElementById('img_orig_wrap').style.display = '';
-            }
-            if (j.presigned_computed) {
-                c.src = j.presigned_computed;
                 document.getElementById('img_comp_wrap').style.display = '';
+                if (editBtn) editBtn.style.display = '';
+                ensureLlmCardLoaded();
+            } else if (editBtn) {
+                editBtn.style.display = 'none';
             }
             var hint = document.getElementById('img_hint');
             if (j.status === 'pending' || j.status === 'processing') {
@@ -651,5 +771,682 @@ $reportI18n = [
     }
     poll();
     setInterval(poll, 4000);
+
+    /* ---------- Manual landmark editor (Konva) ---------- */
+    var KONVA_CDN = 'https://cdn.jsdelivr.net/npm/konva@9.3.16/konva.min.js';
+    var konvaPromise = null;
+    function loadKonva() {
+        if (typeof Konva !== 'undefined') return Promise.resolve();
+        if (konvaPromise) return konvaPromise;
+        konvaPromise = new Promise(function (resolve, reject) {
+            var s = document.createElement('script');
+            s.src = KONVA_CDN;
+            s.async = true;
+            s.onload = function () { resolve(); };
+            s.onerror = function () { konvaPromise = null; reject(new Error('Konva load failed')); };
+            document.head.appendChild(s);
+        });
+        return konvaPromise;
+    }
+
+    var EDITOR = {
+        modalEl: null,
+        bsModal: null,
+        stage: null,
+        bgLayer: null,
+        ovLayer: null,
+        konvaImage: null,
+        imgW: 0,
+        imgH: 0,
+        scale: 1,
+        verts: [],
+        nodes: [],
+        selectedIdx: -1,
+        loaded: false,
+        dirty: false,
+    };
+
+    function lmkMessage(msg, kind) {
+        var el = document.getElementById('lmk_msg');
+        if (!el) return;
+        if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+        el.className = 'alert rounded-0 mb-0 py-2 small ' + (kind === 'danger' ? 'alert-danger' : kind === 'success' ? 'alert-success' : 'alert-warning');
+        el.textContent = msg;
+        el.style.display = '';
+    }
+
+    function flatToVerts(flat) {
+        var verts = [];
+        if (!Array.isArray(flat) || flat.length < 8) return verts;
+        var nKp = 4;
+        var n = Math.floor(flat.length / (nKp * 2));
+        for (var v = 0; v < n; v++) {
+            var pts = [];
+            for (var k = 0; k < nKp; k++) {
+                var i = 2 * (v * nKp + k);
+                pts.push({ x: Number(flat[i]) || 0, y: Number(flat[i + 1]) || 0 });
+            }
+            verts.push(pts);
+        }
+        return verts;
+    }
+    function vertsToFlat(verts) {
+        var out = [];
+        for (var v = 0; v < verts.length; v++) {
+            for (var k = 0; k < verts[v].length; k++) {
+                out.push(Number(verts[v][k].x) || 0);
+                out.push(Number(verts[v][k].y) || 0);
+            }
+        }
+        return out;
+    }
+
+    function vertCentroid(p) {
+        var cx = 0, cy = 0;
+        for (var i = 0; i < p.length; i++) { cx += p[i].x; cy += p[i].y; }
+        return { x: cx / p.length, y: cy / p.length };
+    }
+
+    function applySelectionStyles() {
+        for (var i = 0; i < EDITOR.nodes.length; i++) {
+            var n = EDITOR.nodes[i];
+            if (!n) continue;
+            var isSel = i === EDITOR.selectedIdx;
+            n.quad.stroke(isSel ? '#ffeb3b' : '#00e5ff');
+            n.quad.strokeWidth(isSel ? 2.5 : 1.6);
+            n.quad.fill(isSel ? 'rgba(255,235,59,0.18)' : 'rgba(0,229,255,0.10)');
+            for (var k = 0; k < n.circles.length; k++) {
+                n.circles[k].fill(isSel ? '#ffeb3b' : '#ff9800');
+                n.circles[k].radius(isSel ? 7 : 5.5);
+            }
+        }
+        if (EDITOR.ovLayer) EDITOR.ovLayer.batchDraw();
+    }
+
+    function selectVert(idx) {
+        if (EDITOR.selectedIdx === idx) return;
+        EDITOR.selectedIdx = idx;
+        var rb = document.getElementById('lmk_remove');
+        if (rb) rb.disabled = !(idx >= 0 && EDITOR.verts.length > 2);
+        applySelectionStyles();
+    }
+
+    function updateCount() {
+        var el = document.getElementById('lmk_count');
+        if (!el) return;
+        var tmpl = I18N.lmk_count || '{n} vertebrae';
+        el.textContent = tmpl.replace('{n}', String(EDITOR.verts.length));
+    }
+
+    function rebuildOverlay() {
+        if (!EDITOR.ovLayer) return;
+        EDITOR.ovLayer.destroyChildren();
+        EDITOR.nodes = [];
+        var s = EDITOR.scale;
+        var pxOrder = [0, 1, 3, 2];
+        // Two-pass z-order: first all quads + labels, then ALL handle circles, so a later
+        // vertebra’s filled quad never lands on top of an earlier vertebra’s drag handles.
+        for (var v = 0; v < EDITOR.verts.length; v++) {
+            var pts = EDITOR.verts[v];
+            var poly = [];
+            for (var i = 0; i < pxOrder.length; i++) {
+                poly.push(pts[pxOrder[i]].x * s, pts[pxOrder[i]].y * s);
+            }
+            var quad = new Konva.Line({
+                points: poly,
+                stroke: '#00e5ff',
+                strokeWidth: 1.6,
+                closed: true,
+                fill: 'rgba(0,229,255,0.10)',
+                perfectDrawEnabled: false,
+                hitStrokeWidth: 0,
+                shadowForStrokeEnabled: false,
+                listening: true,
+                transformsEnabled: 'position',
+            });
+            (function (vIdx, q) {
+                q.on('mousedown touchstart', function () { selectVert(vIdx); });
+            })(v, quad);
+            EDITOR.ovLayer.add(quad);
+
+            var ctr = vertCentroid(pts);
+            var label = new Konva.Text({
+                x: ctr.x * s - 10,
+                y: ctr.y * s - 8,
+                text: String(v + 1),
+                fontSize: 13,
+                fontStyle: 'bold',
+                fill: '#fff',
+                listening: false,
+                perfectDrawEnabled: false,
+                transformsEnabled: 'position',
+            });
+            EDITOR.ovLayer.add(label);
+
+            EDITOR.nodes.push({ quad: quad, label: label, circles: [] });
+        }
+        for (var v2 = 0; v2 < EDITOR.verts.length; v2++) {
+            (function (vIdx) {
+                var pts = EDITOR.verts[vIdx];
+                var nodeRef = EDITOR.nodes[vIdx];
+                for (var k = 0; k < 4; k++) {
+                    (function (kpIdx) {
+                        var p = pts[kpIdx];
+                        var c = new Konva.Circle({
+                            x: p.x * s,
+                            y: p.y * s,
+                            radius: 5.5,
+                            fill: '#ff9800',
+                            stroke: '#000',
+                            strokeWidth: 1,
+                            draggable: true,
+                            perfectDrawEnabled: false,
+                            shadowForStrokeEnabled: false,
+                            transformsEnabled: 'position',
+                        });
+                        c.on('mousedown touchstart', function () { selectVert(vIdx); });
+                        c.on('dragstart', function () { c.moveToTop(); });
+                        c.on('dragmove', function () {
+                            var sNow = EDITOR.scale;
+                            EDITOR.verts[vIdx][kpIdx] = {
+                                x: c.x() / sNow,
+                                y: c.y() / sNow,
+                            };
+                            EDITOR.dirty = true;
+                            var newPoly = [];
+                            for (var jj = 0; jj < pxOrder.length; jj++) {
+                                newPoly.push(
+                                    EDITOR.verts[vIdx][pxOrder[jj]].x * sNow,
+                                    EDITOR.verts[vIdx][pxOrder[jj]].y * sNow
+                                );
+                            }
+                            nodeRef.quad.points(newPoly);
+                            var nc = vertCentroid(EDITOR.verts[vIdx]);
+                            nodeRef.label.position({ x: nc.x * sNow - 10, y: nc.y * sNow - 8 });
+                        });
+                        c.on('mouseenter', function () { document.body.style.cursor = 'grab'; });
+                        c.on('mouseleave', function () { document.body.style.cursor = ''; });
+                        EDITOR.ovLayer.add(c);
+                        nodeRef.circles.push(c);
+                    })(k);
+                }
+            })(v2);
+        }
+        applySelectionStyles();
+        EDITOR.ovLayer.batchDraw();
+        updateCount();
+    }
+
+    function rescaleOverlay() {
+        if (!EDITOR.ovLayer) return;
+        var s = EDITOR.scale;
+        var pxOrder = [0, 1, 3, 2];
+        for (var v = 0; v < EDITOR.verts.length; v++) {
+            var n = EDITOR.nodes[v];
+            if (!n) continue;
+            var pts = EDITOR.verts[v];
+            var poly = [];
+            for (var i = 0; i < pxOrder.length; i++) {
+                poly.push(pts[pxOrder[i]].x * s, pts[pxOrder[i]].y * s);
+            }
+            n.quad.points(poly);
+            var ctr = vertCentroid(pts);
+            n.label.position({ x: ctr.x * s - 10, y: ctr.y * s - 8 });
+            for (var k = 0; k < n.circles.length; k++) {
+                n.circles[k].position({ x: pts[k].x * s, y: pts[k].y * s });
+            }
+        }
+        EDITOR.ovLayer.batchDraw();
+    }
+
+    function fitStageToImage() {
+        var wrap = document.getElementById('lmk_stage_wrap');
+        if (!wrap || !EDITOR.imgW || !EDITOR.imgH) return;
+        var availW = Math.max(320, wrap.clientWidth - 16);
+        var availH = Math.max(320, wrap.clientHeight - 16);
+        var s = Math.min(availW / EDITOR.imgW, availH / EDITOR.imgH);
+        if (!isFinite(s) || s <= 0) s = 1;
+        EDITOR.scale = s;
+        var sw = Math.round(EDITOR.imgW * s);
+        var sh = Math.round(EDITOR.imgH * s);
+        if (!EDITOR.stage) {
+            // Clamp HiDPI so giant retina canvases don’t balloon during dragmove redraws.
+            try { Konva.pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5); } catch (_) {}
+            EDITOR.stage = new Konva.Stage({ container: 'lmk_stage', width: sw, height: sh });
+            EDITOR.bgLayer = new Konva.Layer({ listening: false });
+            EDITOR.ovLayer = new Konva.Layer();
+            EDITOR.stage.add(EDITOR.bgLayer);
+            EDITOR.stage.add(EDITOR.ovLayer);
+            EDITOR.stage.on('mousedown touchstart', function (e) {
+                if (e.target === EDITOR.stage) selectVert(-1);
+            });
+        } else {
+            EDITOR.stage.size({ width: sw, height: sh });
+        }
+        if (EDITOR.konvaImage) {
+            EDITOR.konvaImage.size({ width: sw, height: sh });
+        }
+        EDITOR.bgLayer.batchDraw();
+        if (EDITOR.nodes && EDITOR.nodes.length === EDITOR.verts.length) {
+            rescaleOverlay();
+        } else {
+            rebuildOverlay();
+        }
+    }
+
+    function loadOriginalForEditor() {
+        return new Promise(function (resolve, reject) {
+            var img = new window.Image();
+            img.onload = function () {
+                EDITOR.imgW = img.naturalWidth;
+                EDITOR.imgH = img.naturalHeight;
+                if (EDITOR.bgLayer) {
+                    EDITOR.bgLayer.destroyChildren();
+                }
+                EDITOR.konvaImage = new Konva.Image({
+                    image: img,
+                    x: 0,
+                    y: 0,
+                    listening: false,
+                    perfectDrawEnabled: false,
+                    transformsEnabled: 'position',
+                });
+                fitStageToImage();
+                if (EDITOR.bgLayer) {
+                    EDITOR.bgLayer.add(EDITOR.konvaImage);
+                    EDITOR.bgLayer.batchDraw();
+                }
+                resolve();
+            };
+            img.onerror = function () { reject(new Error('image load failed')); };
+            img.src = 'report_image.php?report_id=' + encodeURIComponent(String(reportId)) + '&kind=original';
+        });
+    }
+
+    async function openEditor() {
+        lmkMessage('');
+        try {
+            await loadKonva();
+        } catch (e) {
+            lmkMessage(I18N.lmk_load_konva_err, 'danger');
+            return;
+        }
+        if (!lastReport || !Array.isArray(lastReport.landmarks) || lastReport.landmarks.length < 8) {
+            lmkMessage(I18N.lmk_no_orig, 'danger');
+            return;
+        }
+        EDITOR.verts = flatToVerts(lastReport.landmarks);
+        EDITOR.selectedIdx = -1;
+        EDITOR.dirty = false;
+        try {
+            await loadOriginalForEditor();
+        } catch (e) {
+            lmkMessage(I18N.lmk_load_err, 'danger');
+            return;
+        }
+        EDITOR.loaded = true;
+        document.getElementById('lmk_remove').disabled = true;
+        updateCount();
+    }
+
+    function vertFromCenter(p, dx, dy) {
+        return [
+            { x: p.x - dx, y: p.y - dy },
+            { x: p.x + dx, y: p.y - dy },
+            { x: p.x - dx, y: p.y + dy },
+            { x: p.x + dx, y: p.y + dy },
+        ];
+    }
+
+    function addVertebra() {
+        if (EDITOR.verts.length === 0 || !EDITOR.imgW) return;
+        var last = EDITOR.verts[EDITOR.verts.length - 1];
+        var avg = vertCentroid(last);
+        var dx = (Math.abs(last[1].x - last[0].x) || 30) / 2;
+        var dy = (Math.abs(last[2].y - last[0].y) || 30) / 2;
+        var spacing = dy * 2.4;
+        var newCenter = { x: avg.x, y: Math.min(EDITOR.imgH - dy - 2, avg.y + spacing) };
+        var pts = vertFromCenter(newCenter, dx, dy);
+        var insertAt = EDITOR.selectedIdx >= 0 ? EDITOR.selectedIdx + 1 : EDITOR.verts.length;
+        EDITOR.verts.splice(insertAt, 0, pts);
+        EDITOR.dirty = true;
+        EDITOR.selectedIdx = insertAt;
+        rebuildOverlay();
+        var rb = document.getElementById('lmk_remove');
+        if (rb) rb.disabled = !(EDITOR.selectedIdx >= 0 && EDITOR.verts.length > 2);
+    }
+
+    function removeSelected() {
+        if (EDITOR.selectedIdx < 0) return;
+        if (EDITOR.verts.length <= 2) {
+            lmkMessage(I18N.lmk_min, 'warning');
+            return;
+        }
+        EDITOR.verts.splice(EDITOR.selectedIdx, 1);
+        EDITOR.selectedIdx = -1;
+        EDITOR.dirty = true;
+        document.getElementById('lmk_remove').disabled = true;
+        rebuildOverlay();
+    }
+
+    function resetEditor() {
+        if (EDITOR.dirty && !window.confirm(I18N.lmk_confirm_reset)) return;
+        if (!lastReport || !Array.isArray(lastReport.landmarks)) return;
+        EDITOR.verts = flatToVerts(lastReport.landmarks);
+        EDITOR.selectedIdx = -1;
+        EDITOR.dirty = false;
+        document.getElementById('lmk_remove').disabled = true;
+        rebuildOverlay();
+        lmkMessage('');
+    }
+
+    async function saveEditor() {
+        if (EDITOR.verts.length < 2) {
+            lmkMessage(I18N.lmk_min, 'warning');
+            return;
+        }
+        var saveBtn = document.getElementById('lmk_save');
+        var origLabel = saveBtn.innerHTML;
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + I18N.lmk_saving;
+        lmkMessage('');
+        try {
+            var flat = vertsToFlat(EDITOR.verts);
+            var res = await fetch('recompute_landmarks.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    csrf_token: CSRF_TOKEN,
+                    report_id: reportId,
+                    landmarks: flat,
+                }),
+            });
+            var j = null;
+            try { j = await res.json(); } catch (_) {}
+            if (!res.ok || !j || !j.ok) {
+                var err = (j && j.error) ? j.error : ('HTTP ' + res.status);
+                lmkMessage(err, 'danger');
+                return;
+            }
+            EDITOR.dirty = false;
+            lmkMessage(I18N.lmk_save_ok, 'success');
+            forceImageRefresh = true;
+            if (EDITOR.bsModal) EDITOR.bsModal.hide();
+            poll();
+        } catch (e) {
+            lmkMessage(String(e && e.message ? e.message : e), 'danger');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origLabel;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        EDITOR.modalEl = document.getElementById('svLandmarkEditor');
+        if (!EDITOR.modalEl || typeof bootstrap === 'undefined') return;
+        EDITOR.bsModal = new bootstrap.Modal(EDITOR.modalEl);
+        EDITOR.modalEl.addEventListener('shown.bs.modal', function () {
+            openEditor();
+        });
+        EDITOR.modalEl.addEventListener('hide.bs.modal', function (ev) {
+            if (EDITOR.dirty && !window.confirm(I18N.lmk_confirm_close)) {
+                ev.preventDefault();
+                return;
+            }
+        });
+        EDITOR.modalEl.addEventListener('hidden.bs.modal', function () {
+            if (EDITOR.stage) {
+                try { EDITOR.stage.destroy(); } catch (_) {}
+            }
+            EDITOR.stage = null;
+            EDITOR.bgLayer = null;
+            EDITOR.ovLayer = null;
+            EDITOR.konvaImage = null;
+            EDITOR.nodes = [];
+            EDITOR.loaded = false;
+            EDITOR.dirty = false;
+            EDITOR.selectedIdx = -1;
+            EDITOR.verts = [];
+            lmkMessage('');
+            var rb = document.getElementById('lmk_remove');
+            if (rb) rb.disabled = true;
+        });
+        document.getElementById('lmk_add').addEventListener('click', addVertebra);
+        document.getElementById('lmk_remove').addEventListener('click', removeSelected);
+        document.getElementById('lmk_reset').addEventListener('click', resetEditor);
+        document.getElementById('lmk_save').addEventListener('click', saveEditor);
+        window.addEventListener('resize', function () {
+            if (EDITOR.loaded) fitStageToImage();
+        });
+    });
+
+    /* ---------- AI preliminary description ---------- */
+    // Generation is now async on the inference-worker-llm side. POST enqueues
+    // and returns 202 with { job:{id, status} }; we then poll GET every
+    // LLM_POLL_MS until either a newer draft.id appears or job.status === 'failed'.
+    var LLM = {
+        loaded: false,
+        busy: false,
+        hasDraft: false,
+        lastDraftId: 0,
+        pollTimer: null,
+    };
+    var LLM_POLL_MS = 2000;
+    // 30 minutes hard cap (matches the active-job key TTL on the inference side).
+    var LLM_POLL_MAX = (30 * 60 * 1000) / LLM_POLL_MS;
+
+    function llmStopPolling() {
+        if (LLM.pollTimer) {
+            clearTimeout(LLM.pollTimer);
+            LLM.pollTimer = null;
+        }
+    }
+
+    function llmStatusForJob(job) {
+        if (!job || !job.status) return I18N.llm_generating || '';
+        if (job.status === 'queued' || job.status === 'deferred' || job.status === 'scheduled') {
+            return I18N.llm_queued || I18N.llm_generating || '';
+        }
+        if (job.status === 'started') {
+            return I18N.llm_running || I18N.llm_generating || '';
+        }
+        return I18N.llm_generating || '';
+    }
+
+    function llmFmtDate(s) {
+        if (!s) return '';
+        try {
+            var d = new Date(s);
+            if (isNaN(d.getTime())) return String(s);
+            return d.toLocaleString();
+        } catch (_) { return String(s); }
+    }
+
+    function llmFormatMeta(d) {
+        if (!d || !I18N.llm_meta) return '';
+        return I18N.llm_meta
+            .replace('{model}', String(d.model_tag || ''))
+            .replace('{when}', llmFmtDate(d.created_at))
+            .replace('{secs}', ((Number(d.latency_ms || 0) / 1000)).toFixed(1));
+    }
+
+    function llmRender(draft) {
+        var card = document.getElementById('llm_card');
+        var empty = document.getElementById('llm_empty');
+        var body = document.getElementById('llm_draft');
+        var meta = document.getElementById('llm_meta');
+        var btnLabel = document.getElementById('llm_btn_label');
+        if (!card) return;
+        card.style.display = '';
+        if (draft && draft.response_text) {
+            empty.style.display = 'none';
+            body.style.display = '';
+            body.textContent = String(draft.response_text);
+            meta.textContent = llmFormatMeta(draft);
+            btnLabel.textContent = I18N.llm_regenerate || I18N.llm_generate || 'Regenerate';
+            LLM.hasDraft = true;
+            LLM.lastDraftId = Number(draft.id || 0) || LLM.lastDraftId;
+        } else {
+            empty.style.display = '';
+            body.style.display = 'none';
+            body.textContent = '';
+            meta.textContent = '';
+            btnLabel.textContent = I18N.llm_generate || 'Generate';
+            LLM.hasDraft = false;
+        }
+    }
+
+    function llmShowError(msg) {
+        var el = document.getElementById('llm_error');
+        if (!el) return;
+        if (msg) {
+            el.textContent = String(msg);
+            el.style.display = '';
+        } else {
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+    }
+
+    function llmShowStatus(msg) {
+        var el = document.getElementById('llm_status');
+        if (!el) return;
+        if (msg) { el.textContent = String(msg); el.style.display = ''; }
+        else { el.textContent = ''; el.style.display = 'none'; }
+    }
+
+    async function llmFetchState() {
+        var res = await fetch('generate_draft_impression.php?report_id=' + encodeURIComponent(String(reportId)), {
+            headers: { 'Accept': 'application/json' },
+        });
+        var j = await res.json();
+        if (!res.ok) throw new Error((j && j.error) || ('HTTP ' + res.status));
+        return j || {};
+    }
+
+    async function ensureLlmCardLoaded() {
+        var card = document.getElementById('llm_card');
+        if (card) card.style.display = '';
+        // While the client is polling for draft completion, the 2s LLM loop owns refreshes.
+        if (LLM.busy || LLM.pollTimer) return;
+        // Stable draft and idle: skip redundant GETs on every 4s report poll.
+        if (LLM.loaded && LLM.hasDraft) return;
+        try {
+            var j = await llmFetchState();
+            if (!LLM.loaded) LLM.loaded = true;
+            var draft = j && j.draft ? j.draft : null;
+            if (draft && draft.response_text) {
+                var newId = Number(draft.id || 0) || 0;
+                if (newId > LLM.lastDraftId || !LLM.hasDraft) {
+                    llmRender(draft);
+                }
+            } else if (!LLM.hasDraft) {
+                llmRender(null);
+            }
+            // Auto-enqueued draft (or tab resume): job may appear after the first fetch.
+            var job = j && j.job ? j.job : null;
+            if (job && (job.status === 'queued' || job.status === 'started' || job.status === 'deferred' || job.status === 'scheduled')) {
+                llmBeginPolling();
+            }
+        } catch (e) {
+            LLM.loaded = false;
+            llmShowError(I18N.llm_load_err + ' ' + String(e.message || e));
+        }
+    }
+
+    function llmBeginPolling() {
+        llmStopPolling();
+        LLM.busy = true;
+        var btn = document.getElementById('llm_generate');
+        if (btn) btn.disabled = true;
+        llmShowStatus(I18N.llm_generating || '');
+
+        var ticks = 0;
+        var prevDraftId = LLM.lastDraftId;
+        async function tick() {
+            LLM.pollTimer = null;
+            ticks++;
+            try {
+                var j = await llmFetchState();
+                var draft = j && j.draft ? j.draft : null;
+                var job = j && j.job ? j.job : null;
+                var newDraftId = draft ? (Number(draft.id || 0) || 0) : 0;
+
+                // Done: a fresh draft (newer than the one we had before POST) was persisted.
+                if (newDraftId > prevDraftId) {
+                    llmRender(draft);
+                    llmStopPolling();
+                    llmShowStatus('');
+                    LLM.busy = false;
+                    if (btn) btn.disabled = false;
+                    return;
+                }
+
+                if (job) {
+                    if (job.status === 'failed') {
+                        llmStopPolling();
+                        llmShowStatus('');
+                        LLM.busy = false;
+                        if (btn) btn.disabled = false;
+                        llmShowError((I18N.llm_gen_err || 'Error: ') + String(job.error || 'failed'));
+                        return;
+                    }
+                    if (job.status === 'finished' && newDraftId <= prevDraftId) {
+                        // Worker reports done but no fresh draft row yet — give the DB write a tick.
+                        // Fall through to scheduling another poll.
+                    }
+                    llmShowStatus(llmStatusForJob(job));
+                }
+
+                if (ticks >= LLM_POLL_MAX) {
+                    llmStopPolling();
+                    llmShowStatus('');
+                    LLM.busy = false;
+                    if (btn) btn.disabled = false;
+                    llmShowError((I18N.llm_gen_err || 'Error: ') + 'timed out waiting for draft.');
+                    return;
+                }
+            } catch (e) {
+                // Transient errors don't abort the loop; we just surface them and try again.
+                llmShowError(I18N.llm_load_err + ' ' + String(e.message || e));
+            }
+            LLM.pollTimer = setTimeout(tick, LLM_POLL_MS);
+        }
+        LLM.pollTimer = setTimeout(tick, LLM_POLL_MS);
+    }
+
+    async function llmGenerate() {
+        if (LLM.busy) return;
+        if (LLM.hasDraft && I18N.llm_confirm_regen && !window.confirm(I18N.llm_confirm_regen)) return;
+        LLM.busy = true;
+        var btn = document.getElementById('llm_generate');
+        if (btn) btn.disabled = true;
+        llmShowError('');
+        llmShowStatus(I18N.llm_queued || I18N.llm_generating || '');
+        try {
+            var res = await fetch('generate_draft_impression.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ csrf_token: CSRF_TOKEN, report_id: reportId }),
+            });
+            var j = await res.json();
+            // 202 Accepted is the normal happy path; any non-2xx is an error.
+            if (!res.ok || !j || j.ok !== true) {
+                throw new Error((j && j.error) || ('HTTP ' + res.status));
+            }
+            llmBeginPolling();
+        } catch (e) {
+            llmShowStatus('');
+            llmShowError((I18N.llm_gen_err || 'Error: ') + String(e.message || e));
+            if (btn) btn.disabled = false;
+            LLM.busy = false;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('llm_generate');
+        if (btn) btn.addEventListener('click', llmGenerate);
+    });
 </script>
 <?php sv_layout_end(); ?>

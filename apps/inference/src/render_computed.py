@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Tuple
+from typing import Any
 
 import cv2 as cv
 import numpy as np
@@ -10,7 +10,7 @@ import numpy as np
 
 def _create_long_line(
     x1: float, x2: float, y1: float, y2: float, image_width: int, image_height: int
-) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+) -> tuple[tuple[int, int], tuple[int, int]]:
     if abs(x2 - x1) < 1e-6:
         return (int(x1), 0), (int(x1), int(image_height * 2))
     m = (y2 - y1) / (x2 - x1)
@@ -21,16 +21,16 @@ def _create_long_line(
     return (int(left_x), int(left_y)), (int(right_x), int(right_y))
 
 
-def _landmark_points(landmarks_flat: list) -> List[List[float]]:
-    pts: List[List[float]] = []
+def _landmark_points(landmarks_flat: list) -> list[list[float]]:
+    pts: list[list[float]] = []
     for i in range(0, len(landmarks_flat), 2):
         if i + 1 < len(landmarks_flat):
             pts.append([float(landmarks_flat[i]), float(landmarks_flat[i + 1])])
     return pts
 
 
-def _paths_all_lines(points: List[List[float]]) -> List[List[List[float]]]:
-    paths: List[List[List[float]]] = []
+def _paths_all_lines(points: list[list[float]]) -> list[list[list[float]]]:
+    paths: list[list[list[float]]] = []
     step = 4
     for i in range(0, len(points), step):
         if i + 3 >= len(points):

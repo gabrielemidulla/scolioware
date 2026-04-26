@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/inference_internal.php';
+
 /**
  * TCPDF wrapper + helpers for Scoliosoft PDF reports.
  *
@@ -249,11 +251,18 @@ function sv_upload_pdf_to_inference(
         'pdf' => new CURLFile($tmp, 'application/pdf', 'report.pdf'),
     ];
 
+    $headers = array_values(
+        array_filter(
+            sv_inference_curl_headers(),
+            static fn (string $h) => $h !== 'Accept: application/json'
+        )
+    );
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $post,
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_TIMEOUT => 60,
         CURLOPT_CONNECTTIMEOUT => 10,
     ]);
@@ -278,29 +287,4 @@ function sv_upload_pdf_to_inference(
         return null;
     }
     return $json;
-}
-
-/**
- * Resolve a fresh presigned URL for a stored PDF via the automatic measurements backend.
- */
-function sv_pdf_presigned_url(int $pdfReportId, int $expiresIn = 3600): ?string
-{
-    $url = sv_inference_base_url() . '/pdf-reports/' . $pdfReportId . '/url?expires_in=' . $expiresIn;
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_CONNECTTIMEOUT => 5,
-    ]);
-    $body = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($body === false || $code < 200 || $code >= 300) {
-        return null;
-    }
-    $json = json_decode((string) $body, true);
-    if (!is_array($json) || empty($json['presigned_url'])) {
-        return null;
-    }
-    return (string) $json['presigned_url'];
 }

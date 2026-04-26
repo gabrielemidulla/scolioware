@@ -1,7 +1,7 @@
 import json
 import os
 from contextlib import contextmanager
-from typing import Any, Optional
+from typing import Any
 
 import pymysql
 from pymysql.cursors import DictCursor
@@ -44,8 +44,8 @@ def patient_exists(patient_id: int) -> bool:
 
 def insert_report_pending(
     patient_id: int,
-    height_cm: Optional[float] = None,
-    weight_kg: Optional[float] = None,
+    height_cm: float | None = None,
+    weight_kg: float | None = None,
 ) -> int:
     with get_conn() as conn:
         cur = conn.cursor()
@@ -91,31 +91,6 @@ def set_original_key(report_id: int, key: str) -> None:
         )
 
 
-def claim_next_pending() -> Optional[dict[str, Any]]:
-    """Atomically move one pending row to processing; return row or None."""
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT id, patient_id, original_object_key
-            FROM reports
-            WHERE status = 'pending' AND original_object_key IS NOT NULL
-            ORDER BY id ASC
-            LIMIT 1
-            """
-        )
-        row = cur.fetchone()
-        if not row:
-            return None
-        cur.execute(
-            "UPDATE reports SET status = 'processing' WHERE id = %s AND status = 'pending'",
-            (row["id"],),
-        )
-        if cur.rowcount != 1:
-            return None
-        return dict(row)
-
-
 def mark_failed(report_id: int, message: str) -> None:
     with get_conn() as conn:
         cur = conn.cursor()
@@ -132,8 +107,8 @@ def mark_completed(
     landmarks: Any,
     angles: Any,
     midpoint_lines: Any,
-    curve_type: Optional[str],
-    derived: Optional[dict[str, Any]] = None,
+    curve_type: str | None,
+    derived: dict[str, Any] | None = None,
 ) -> None:
     d = derived or {}
     with get_conn() as conn:
@@ -204,10 +179,22 @@ def _json_default(o):
     raise TypeError(type(o))
 
 
-def fetch_report(report_id: int) -> Optional[dict[str, Any]]:
+def fetch_report(report_id: int) -> dict[str, Any] | None:
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM reports WHERE id = %s", (report_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def fetch_patient_meta(patient_id: int) -> dict[str, Any] | None:
+    """Minimal subset for LLM context: birth_date + gender. Avoids leaking name/tax_code."""
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT birth_date, gender FROM patients WHERE id = %s LIMIT 1",
+            (patient_id,),
+        )
         row = cur.fetchone()
         return dict(row) if row else None
 
@@ -216,12 +203,12 @@ def insert_pdf_report(
     *,
     patient_id: int,
     report_id: int,
-    physician_id: Optional[int],
-    physician_username: Optional[str],
-    title: Optional[str],
-    notes: Optional[str],
+    physician_id: int | None,
+    physician_username: str | None,
+    title: str | None,
+    notes: str | None,
     pdf_object_key: str,
-    pdf_bytes_size: Optional[int],
+    pdf_bytes_size: int | None,
 ) -> int:
     with get_conn() as conn:
         cur = conn.cursor()
@@ -246,7 +233,7 @@ def insert_pdf_report(
         return int(cur.lastrowid)
 
 
-def fetch_pdf_report(pdf_report_id: int) -> Optional[dict[str, Any]]:
+def fetch_pdf_report(pdf_report_id: int) -> dict[str, Any] | None:
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -266,3 +253,89 @@ def soft_delete_pdf_report(pdf_report_id: int) -> bool:
             (pdf_report_id,),
         )
         return cur.rowcount == 1
+
+
+def set_dicom_metadata(report_id: int, metadata: dict[str, Any] | None) -> None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE reports SET dicom_metadata_json = %s WHERE id = %s",
+            (json.dumps(metadata, default=_json_default) if metadata is not None else None, report_id),
+        )
+
+
+def try_mark_processing(report_id: int) -> bool:
+    """pending → processing when original_object_key is set; used for RQ enqueue after upload."""
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE reports SET status = 'processing' WHERE id = %s AND status = 'pending' AND original_object_key IS NOT NULL",
+            (report_id,),
+        )
+        return cur.rowcount == 1
+
+
+def insert_landmark_revision(
+    report_id: int,
+    landmarks: Any,
+    physician_id: int | None,
+    source: str = "manual_json",
+) -> None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO report_landmark_revisions (report_id, physician_id, landmarks_json, source) VALUES (%s, %s, %s, %s)",
+            (report_id, physician_id, json.dumps(landmarks, default=_json_default), source[:32]),
+        )
+
+
+def insert_llm_draft(
+    *,
+    report_id: int,
+    physician_id: int | None,
+    model_tag: str,
+    prompt_version: str,
+    response_text: str,
+    latency_ms: int,
+    prompt_tokens: int | None,
+    completion_tokens: int | None,
+) -> int:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO report_llm_drafts
+              (report_id, physician_id, model_tag, prompt_version,
+               response_text, latency_ms, prompt_tokens, completion_tokens)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                report_id,
+                physician_id,
+                model_tag[:64],
+                prompt_version[:32],
+                response_text,
+                max(0, int(latency_ms)),
+                prompt_tokens,
+                completion_tokens,
+            ),
+        )
+        return int(cur.lastrowid)
+
+
+def fetch_latest_llm_draft(report_id: int) -> dict[str, Any] | None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, report_id, physician_id, model_tag, prompt_version,
+                   response_text, latency_ms, prompt_tokens, completion_tokens, created_at
+            FROM report_llm_drafts
+            WHERE report_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (report_id,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None

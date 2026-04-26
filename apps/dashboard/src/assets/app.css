@@ -451,6 +451,18 @@ pre {
   width: 14px;
 }
 
+/* Space between a leading icon and label on primary/secondary buttons only.
+   Margin on <i> failed: with icon + text, <i> is often the only *element* child, so
+   <i:only-child> was true and zeroed the margin. Flex gap is reliable instead. */
+a.btn.btn-primary,
+a.btn.btn-secondary,
+button.btn.btn-primary,
+button.btn.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.4em;
+}
+
 .btn-primary,
 .btn-primary:focus {
   color: #ffffff;
@@ -942,3 +954,52 @@ pre {
 .sv-auth-help {
   font-size: 12.5px;
 }
+
+/* Patient charts */
+.sv-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 280px;
+}
+@media (min-width: 1200px) {
+  .sv-chart-wrap { height: 320px; }
+}
+
+/* Manual landmark editor (Konva on report.php) */
+.sv-lmk-stage-wrap {
+  background:
+    linear-gradient(45deg, #1a1a1a 25%, transparent 25%) 0 0 / 16px 16px,
+    linear-gradient(-45deg, #1a1a1a 25%, transparent 25%) 0 8px / 16px 16px,
+    linear-gradient(45deg, transparent 75%, #1a1a1a 75%) 8px -8px / 16px 16px,
+    linear-gradient(-45deg, transparent 75%, #1a1a1a 75%) 8px 0 / 16px 16px,
+    #111;
+  overflow: auto;
+  padding: 8px;
+}
+.sv-lmk-stage {
+  display: inline-block;
+  background: #000;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  border: 1px solid #333;
+  touch-action: none;
+}
+.sv-lmk-stage canvas {
+  display: block;
+}
+#svLandmarkEditor .modal-header {
+  background: #14181c;
+}
+#svLandmarkEditor #lmk_help code {
+  color: #ffd54f;
+}
+
+.sv-llm-draft {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 0.95rem;
+  background: #fafbfc;
+  border: 1px solid #e6e8eb;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+

@@ -1,4 +1,3 @@
-# Run from repo root: docker compose up -d
-# Compose file lives in infra/; paths there are relative to infra/.
+# From repo: ./scripts/run.sh | build.sh  (autodetects mps|nvidia|amd|cpu; see scripts/lib/detect-llm-target.sh)
 include:
   - path: infra/docker-compose.yaml

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from src.curve_type import normalize_curve_type
 
 
-def _angle_deg(angles: Optional[dict], key: str) -> Optional[float]:
+def _angle_deg(angles: dict | None, key: str) -> float | None:
     if not angles:
         return None
     block = angles.get(key)
@@ -19,7 +19,7 @@ def _angle_deg(angles: Optional[dict], key: str) -> Optional[float]:
 
 def _max_cobb(
     angles: dict,
-) -> tuple[Optional[str], Optional[float], Optional[int], Optional[int]]:
+) -> tuple[str | None, float | None, int | None, int | None]:
     """Return (region pt|mt|tl, degrees, superior_vert_1based, inferior_vert_1based)."""
     triple: list[tuple[str, float]] = []
     for k in ("pt", "mt", "tl"):
@@ -77,7 +77,7 @@ def build_report_derived(api: dict[str, Any], image_shape: tuple[int, ...]) -> d
     row["cobb_mt_deg"] = mt
     row["cobb_tl_deg"] = tl
 
-    thoracic: Optional[float] = None
+    thoracic: float | None = None
     if pt is not None and mt is not None:
         thoracic = max(pt, mt)
     elif pt is not None:

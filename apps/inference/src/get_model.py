@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 
 import torch
-from torchvision.models.detection.rpn import AnchorGenerator
 import torchvision
+from torchvision.models.detection.rpn import AnchorGenerator
 
 MODEL_FILENAME = "keypointsrcnn_weights.pt"
 
@@ -80,12 +80,15 @@ def get_kprcnn_model():
     )
     model = torchvision.models.detection.keypointrcnn_resnet50_fpn(
         pretrained=False,
-        pretrained_backbone=True,
+        pretrained_backbone=False,
         num_keypoints=num_keypoints,
         num_classes=2,
         rpn_anchor_generator=anchor_generator,
     )
-    state_dict = torch.load(path, map_location=torch.device("cpu"))
+    try:
+        state_dict = torch.load(path, map_location=torch.device("cpu"), weights_only=True)
+    except TypeError:
+        state_dict = torch.load(path, map_location=torch.device("cpu"))
     model.load_state_dict(state_dict)
 
     return model

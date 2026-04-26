@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-// __() is used at render time; ensure Locale is available if only pagination was loaded first.
 if (!function_exists('__')) {
     require_once __DIR__ . '/Locale.php';
     Locale::init();

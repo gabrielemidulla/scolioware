@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
-def normalize_curve_type(value: Any) -> Optional[str]:
+def normalize_curve_type(value: Any) -> str | None:
     """Return 'C', 'S', or None for anything else (matches DB ENUM)."""
     if value is None:
         return None

@@ -5,8 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/inc/db.php';
 require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/layout.php';
+require_once __DIR__ . '/inc/phi_log.php';
 
 sv_require_auth();
+sv_phi_log('view_dashboard', null, null, null);
 
 try {
     db()->query('SELECT 1');

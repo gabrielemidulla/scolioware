@@ -5,8 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/inc/db.php';
 require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/layout.php';
+require_once __DIR__ . '/inc/phi_log.php';
 
 $admin = sv_require_admin();
+sv_phi_log('view_physicians', null, null, null);
 $pdo = db();
 
 $flash = '';

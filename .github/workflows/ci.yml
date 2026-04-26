@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  inference:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/inference
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PyTorch (CPU)
+        run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - name: Install dependencies
+        run: pip install ruff pytest -r requirements.txt
+      - name: Ruff
+        run: ruff check main.py src tests
+      - name: Pytest
+        env:
+          PYTHONPATH: .
+        run: pytest -q

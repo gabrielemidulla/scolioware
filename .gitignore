@@ -1,1 +1,9 @@
+.DS_Store
 .env
+infra/.env
+**/__pycache__/
+*.pyc
+.python-version
+.venv/
+node_modules/
+.cursor/

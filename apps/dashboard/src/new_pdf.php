@@ -7,6 +7,7 @@ require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/layout.php';
 require __DIR__ . '/inc/back.php';
 require __DIR__ . '/inc/pdf.php';
+require_once __DIR__ . '/inc/inference_internal.php';
 
 $user = sv_require_auth();
 
@@ -61,15 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $imageBytes = null;
         if ($includeImage && (string) ($report['computed_object_key'] ?? '') !== '') {
-            $infUrl = sv_inference_base_url() . '/reports/' . (int) $report['id'];
-            $jsonBytes = sv_fetch_url_bytes($infUrl, 10);
-            if ($jsonBytes !== null) {
-                $j = json_decode($jsonBytes, true);
-                $presigned = is_array($j) ? ($j['presigned_computed'] ?? null) : null;
-                if (is_string($presigned) && $presigned !== '') {
-                    $imageBytes = sv_fetch_url_bytes($presigned, 20);
-                }
-            }
+            $imageBytes = sv_inference_get_bytes(
+                '/internal/reports/' . (int) $report['id'] . '/file?kind=computed',
+                30
+            );
         }
 
         try {

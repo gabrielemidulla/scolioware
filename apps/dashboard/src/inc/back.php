@@ -88,7 +88,6 @@ function sv_back_validate(?string $back): ?string
     if (isset($parts[1]) && strlen($parts[1]) > 1500) {
         return null;
     }
-    // Query string: allow only printable ASCII (typical GET params)
     if (isset($parts[1]) && preg_match('/[^\x20-\x7E]/', $parts[1])) {
         return null;
     }

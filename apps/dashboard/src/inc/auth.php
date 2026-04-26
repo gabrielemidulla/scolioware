@@ -6,8 +6,33 @@ require_once __DIR__ . '/db.php';
 
 const SV_TOKEN_TTL_HOURS = 24;
 const SV_MIN_PASSWORD_LEN = 6;
-const SV_DEFAULT_ADMIN_USER = 'admin';
-const SV_DEFAULT_ADMIN_PASSWORD = 'admin';
+
+/** Max login failures per 5 minutes (per IP and per username). */
+const SV_LOGIN_MAX_ATTEMPTS = 5;
+const SV_LOGIN_LOCK_WINDOW_SEC = 300;
+
+/** Default: 30 min idle; set SV_SESSION_IDLE_SEC. */
+const SV_SESSION_IDLE_DEFAULT_SEC = 1800;
+/** Default: 12 h absolute; set SV_SESSION_MAX_AGE_SEC. */
+const SV_SESSION_MAX_AGE_DEFAULT_SEC = 43200;
+
+function sv_env_int(string $name, int $default): int
+{
+    $v = getenv($name);
+    if (!is_string($v) || $v === '' || !ctype_digit($v)) {
+        return $default;
+    }
+    return (int) $v;
+}
+
+function sv_session_cookie_secure(): bool
+{
+    $v = getenv('SV_COOKIE_SECURE');
+    if ($v === false || $v === '') {
+        return true;
+    }
+    return $v === '1' || strtolower((string) $v) === 'true';
+}
 
 function sv_session_start(): void
 {
@@ -18,7 +43,8 @@ function sv_session_start(): void
         'lifetime' => 0,
         'path' => '/',
         'httponly' => true,
-        'samesite' => 'Lax',
+        'samesite' => 'Strict',
+        'secure' => sv_session_cookie_secure(),
     ]);
     session_name('SV_SESSION');
     session_start();
@@ -57,21 +83,80 @@ function sv_current_url(): string
     return basename($_SERVER['SCRIPT_NAME'] ?? 'index.php');
 }
 
+/**
+ * Return true if this IP (or username) is rate-limited.
+ */
+function sv_login_is_locked_out(string $ip, string $username): bool
+{
+    $ip = trim($ip);
+    $u = mb_strtolower(trim($username), 'UTF-8');
+    if ($ip === '' && $u === '') {
+        return false;
+    }
+    $window = SV_LOGIN_LOCK_WINDOW_SEC;
+    $max = SV_LOGIN_MAX_ATTEMPTS;
+    $since = (new DateTimeImmutable())->modify('-' . $window . ' seconds')->format('Y-m-d H:i:s');
+    try {
+        $pdo = db();
+        if ($ip !== '') {
+            $s = $pdo->prepare('SELECT COUNT(*) FROM login_throttle WHERE scope = ? AND identity = ? AND attempted_at >= ?');
+            $s->execute(['ip', $ip, $since]);
+            if ((int) $s->fetchColumn() >= $max) {
+                return true;
+            }
+        }
+        if ($u !== '') {
+            $s = $pdo->prepare('SELECT COUNT(*) FROM login_throttle WHERE scope = ? AND identity = ? AND attempted_at >= ?');
+            $s->execute(['user', $u, $since]);
+            if ((int) $s->fetchColumn() >= $max) {
+                return true;
+            }
+        }
+    } catch (Throwable) {
+        return false;
+    }
+    return false;
+}
+
+function sv_login_record_failure(string $ip, string $username): void
+{
+    $ip = trim($ip);
+    $u = mb_strtolower(trim($username), 'UTF-8');
+    try {
+        $pdo = db();
+        if ($ip !== '') {
+            $pdo->prepare('INSERT INTO login_throttle (scope, identity) VALUES (?, ?)')->execute(['ip', $ip]);
+        }
+        if ($u !== '') {
+            $pdo->prepare('INSERT INTO login_throttle (scope, identity) VALUES (?, ?)')->execute(['user', $u]);
+        }
+    } catch (Throwable) {
+    }
+}
+
+function sv_login_clear_throttle(string $ip, string $username): void
+{
+    $ip = trim($ip);
+    $u = mb_strtolower(trim($username), 'UTF-8');
+    try {
+        $pdo = db();
+        if ($ip !== '') {
+            $pdo->prepare('DELETE FROM login_throttle WHERE scope = ? AND identity = ?')
+                ->execute(['ip', $ip]);
+        }
+        if ($u !== '') {
+            $pdo->prepare('DELETE FROM login_throttle WHERE scope = ? AND identity = ?')
+                ->execute(['user', $u]);
+        }
+    } catch (Throwable) {
+    }
+}
+
+/**
+ * @deprecated No longer used — run `php seed_admin.php` (CLI) once. Kept for grep compatibility.
+ */
 function sv_ensure_admin(): void
 {
-    $pdo = db();
-    $count = (int) $pdo->query(
-        'SELECT COUNT(*) FROM physicians WHERE deleted_at IS NULL AND is_admin = 1'
-    )->fetchColumn();
-    if ($count > 0) {
-        return;
-    }
-    $hash = password_hash(SV_DEFAULT_ADMIN_PASSWORD, PASSWORD_BCRYPT);
-    $stmt = $pdo->prepare(
-        "INSERT INTO physicians (username, password_hash, is_admin, display_name)
-         VALUES (?, ?, 1, 'Administrator')"
-    );
-    $stmt->execute([SV_DEFAULT_ADMIN_USER, $hash]);
 }
 
 function sv_find_physician_by_username(string $username): ?array
@@ -96,10 +181,12 @@ function sv_login_user(array $physician): void
 {
     sv_session_start();
     session_regenerate_id(true);
+    $now = time();
     $_SESSION['physician_id'] = (int) $physician['id'];
     $_SESSION['username'] = (string) $physician['username'];
     $_SESSION['is_admin'] = (int) $physician['is_admin'] === 1;
-    $_SESSION['logged_in_at'] = time();
+    $_SESSION['logged_in_at'] = $now;
+    $_SESSION['last_activity'] = $now;
 }
 
 function sv_logout(): void
@@ -121,10 +208,67 @@ function sv_logout(): void
     session_destroy();
 }
 
+function sv_session_timeouts(int &$physicianId): void
+{
+    $idle = sv_env_int('SV_SESSION_IDLE_SEC', SV_SESSION_IDLE_DEFAULT_SEC);
+    $max = sv_env_int('SV_SESSION_MAX_AGE_SEC', SV_SESSION_MAX_AGE_DEFAULT_SEC);
+    if ($idle < 60) {
+        $idle = 60;
+    }
+    if ($max < $idle) {
+        $max = $idle;
+    }
+    $now = time();
+    $la = (int) ($_SESSION['last_activity'] ?? 0);
+    $loginAt = (int) ($_SESSION['logged_in_at'] ?? 0);
+    if ($la > 0 && $now - $la > $idle) {
+        sv_logout();
+        $physicianId = 0;
+        return;
+    }
+    if ($loginAt > 0 && $now - $loginAt > $max) {
+        sv_logout();
+        $physicianId = 0;
+        return;
+    }
+    $_SESSION['last_activity'] = $now;
+}
+
+/**
+ * Pages reachable before forced password change completes.
+ *
+ * @return list<string>
+ */
+function sv_password_change_exempt_pages(): array
+{
+    return [
+        'account.php',
+        'logout.php',
+        'set_language.php',
+        'inference_session_auth.php',
+    ];
+}
+
+/**
+ * @param array $u Row from {@see sv_find_physician} / {@see sv_current_user}
+ */
+function sv_user_must_set_password_on_this_request(array $u): bool
+{
+    if (!isset($u['password_must_change']) || (int) $u['password_must_change'] !== 1) {
+        return false;
+    }
+    $p = sv_current_url();
+    return !in_array($p, sv_password_change_exempt_pages(), true);
+}
+
 function sv_current_user(): ?array
 {
     sv_session_start();
     $id = isset($_SESSION['physician_id']) ? (int) $_SESSION['physician_id'] : 0;
+    if ($id <= 0) {
+        return null;
+    }
+    sv_session_timeouts($id);
     if ($id <= 0) {
         return null;
     }
@@ -146,13 +290,17 @@ function sv_require_auth(): array
 {
     sv_session_start();
     $u = sv_current_user();
-    if ($u !== null) {
-        return $u;
+    if ($u === null) {
+        $next = $_SERVER['REQUEST_URI'] ?? '';
+        $qs = $next !== '' ? '?next=' . urlencode($next) : '';
+        header('Location: login.php' . $qs);
+        exit;
     }
-    $next = $_SERVER['REQUEST_URI'] ?? '';
-    $qs = $next !== '' ? '?next=' . urlencode($next) : '';
-    header('Location: login.php' . $qs);
-    exit;
+    if (sv_user_must_set_password_on_this_request($u)) {
+        header('Location: account.php?must_change=1');
+        exit;
+    }
+    return $u;
 }
 
 function sv_require_admin(): array
@@ -173,7 +321,9 @@ function sv_require_admin(): array
 function sv_set_password(int $physicianId, string $newPassword): void
 {
     $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-    $stmt = db()->prepare('UPDATE physicians SET password_hash = ? WHERE id = ?');
+    $stmt = db()->prepare(
+        'UPDATE physicians SET password_hash = ?, password_must_change = 0 WHERE id = ?'
+    );
     $stmt->execute([$hash, $physicianId]);
 }
 

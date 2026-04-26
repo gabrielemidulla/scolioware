@@ -7,6 +7,7 @@ require __DIR__ . '/inc/auth.php';
 require __DIR__ . '/inc/pagination.php';
 require __DIR__ . '/inc/layout.php';
 require __DIR__ . '/inc/back.php';
+require_once __DIR__ . '/inc/phi_log.php';
 
 sv_require_auth();
 
@@ -26,6 +27,8 @@ if (!$patient) {
     echo htmlspecialchars((string) __('patient.err_not_found'), ENT_QUOTES, 'UTF-8');
     exit;
 }
+
+sv_phi_log('view_patient', (int) $patient['id'], null, null);
 
 $allowedStatus = ['pending', 'processing', 'completed', 'failed'];
 
@@ -202,6 +205,41 @@ $listStmt = $pdo->prepare($listSql);
 $listStmt->execute($params);
 $reports = $listStmt->fetchAll();
 
+$chartStmt = $pdo->prepare(
+    "SELECT id, created_at, status,
+            cobb_pt_deg, cobb_mt_deg, cobb_tl_deg,
+            cobb_thoracic_deg, cobb_lumbar_deg, cobb_max_deg, cobb_max_region,
+            height_cm, weight_kg
+     FROM reports
+     WHERE patient_id = ? AND status = 'completed'
+     ORDER BY created_at ASC, id ASC"
+);
+$chartStmt->execute([$id]);
+$chartRows = $chartStmt->fetchAll();
+
+$chartData = [
+    'labels' => [],
+    'rids' => [],
+    'cobb_pt' => [],
+    'cobb_mt' => [],
+    'cobb_tl' => [],
+    'cobb_max' => [],
+    'cobb_max_region' => [],
+    'height_cm' => [],
+    'weight_kg' => [],
+];
+foreach ($chartRows as $cr) {
+    $chartData['labels'][] = (string) $cr['created_at'];
+    $chartData['rids'][] = (int) $cr['id'];
+    $chartData['cobb_pt'][] = isset($cr['cobb_pt_deg']) && is_numeric($cr['cobb_pt_deg']) ? (float) $cr['cobb_pt_deg'] : null;
+    $chartData['cobb_mt'][] = isset($cr['cobb_mt_deg']) && is_numeric($cr['cobb_mt_deg']) ? (float) $cr['cobb_mt_deg'] : null;
+    $chartData['cobb_tl'][] = isset($cr['cobb_tl_deg']) && is_numeric($cr['cobb_tl_deg']) ? (float) $cr['cobb_tl_deg'] : null;
+    $chartData['cobb_max'][] = isset($cr['cobb_max_deg']) && is_numeric($cr['cobb_max_deg']) ? (float) $cr['cobb_max_deg'] : null;
+    $chartData['cobb_max_region'][] = $cr['cobb_max_region'] !== null ? (string) $cr['cobb_max_region'] : '';
+    $chartData['height_cm'][] = isset($cr['height_cm']) && is_numeric($cr['height_cm']) ? (float) $cr['height_cm'] : null;
+    $chartData['weight_kg'][] = isset($cr['weight_kg']) && is_numeric($cr['weight_kg']) ? (float) $cr['weight_kg'] : null;
+}
+
 $from = $totalReports === 0 ? 0 : $offset + 1;
 $to = min($offset + count($reports), $totalReports);
 $rowsPart = $totalReports > 0
@@ -268,6 +306,46 @@ sv_topbar(
                 echo $lw !== null && $lw !== '' && is_numeric($lw) ? '<strong>' . htmlspecialchars(number_format((float) $lw, 2)) . '</strong>' : '<span class="text-muted">' . htmlspecialchars((string) __('common.dash'), ENT_QUOTES, 'UTF-8') . '</span>';
             ?></div>
         </div>
+    </div>
+</div>
+
+<div class="sv-card mb-3" id="sv-patient-charts"<?= count($chartRows) === 0 ? ' style="display:none;"' : '' ?>>
+    <div class="sv-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            <i class="fa-solid fa-chart-line"></i> <?= htmlspecialchars((string) __('patient.charts_title'), ENT_QUOTES, 'UTF-8') ?>
+            <span class="text-muted fw-normal small ms-2"><?= htmlspecialchars(
+                (string) __('patient.charts_sub', ['n' => count($chartRows)]),
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?></span>
+        </span>
+    </div>
+    <div class="sv-card-body">
+        <div class="row g-3">
+            <div class="col-12 col-xl-6">
+                <div class="sv-chart-wrap">
+                    <canvas id="sv-chart-cobb" aria-label="<?= htmlspecialchars(
+                        (string) __('patient.charts_cobb_aria'),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ) ?>"></canvas>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <div class="sv-chart-wrap">
+                    <canvas id="sv-chart-vitals" aria-label="<?= htmlspecialchars(
+                        (string) __('patient.charts_vitals_aria'),
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ) ?>"></canvas>
+                </div>
+            </div>
+        </div>
+        <p class="small text-muted mb-0 mt-2"><?= htmlspecialchars(
+            (string) __('patient.charts_help'),
+            ENT_QUOTES,
+            'UTF-8'
+        ) ?></p>
     </div>
 </div>
 
@@ -506,4 +584,151 @@ sv_topbar(
         </div>
     </div>
 </div>
+<?php if (count($chartRows) > 0): ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+<script>
+    window.__SV_PATIENT_CHARTS = <?= json_encode($chartData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>;
+    window.__SV_CHART_I18N = <?= json_encode([
+        'cobb_title' => (string) __('patient.charts_cobb_title'),
+        'vitals_title' => (string) __('patient.charts_vitals_title'),
+        'pt' => (string) __('report.cobb_pt'),
+        'mt' => (string) __('report.cobb_mt'),
+        'tl' => (string) __('report.cobb_tl'),
+        'max' => (string) __('report.cobb_max'),
+        'height' => (string) __('report.h_cm'),
+        'weight' => (string) __('report.w_kg'),
+        'angle_deg' => (string) __('patient.charts_yaxis_deg'),
+        'cm' => (string) __('patient.unit_cm'),
+        'kg' => (string) __('patient.unit_kg'),
+        'date' => (string) __('patient.col_created'),
+        'report' => (string) __('patient.col_report'),
+    ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>;
+    document.addEventListener('DOMContentLoaded', function () {
+        function init() {
+            if (typeof Chart === 'undefined') { window.setTimeout(init, 60); return; }
+            var d = window.__SV_PATIENT_CHARTS;
+            var t = window.__SV_CHART_I18N;
+            if (!d || !d.labels || !d.labels.length) return;
+
+            var labels = d.labels.map(function (s) { return (s || '').slice(0, 10); });
+            var primary = '#0f6b6b';
+            var accent  = '#138787';
+            var amber   = '#b58900';
+            var slate   = '#586e75';
+            var mid     = '#9aa0a6';
+
+            function hasAny(arr) { return arr && arr.some(function (v) { return v !== null && v !== undefined; }); }
+            function ds(label, data, color, dashed) {
+                return {
+                    label: label,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    pointBackgroundColor: color,
+                    pointBorderColor: color,
+                    spanGaps: true,
+                    tension: 0.25,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    borderDash: dashed ? [6, 4] : [],
+                };
+            }
+
+            var cobbDatasets = [];
+            if (hasAny(d.cobb_max)) cobbDatasets.push(ds(t.max, d.cobb_max, primary));
+            if (hasAny(d.cobb_pt))  cobbDatasets.push(ds(t.pt,  d.cobb_pt,  accent, true));
+            if (hasAny(d.cobb_mt))  cobbDatasets.push(ds(t.mt,  d.cobb_mt,  amber,  true));
+            if (hasAny(d.cobb_tl))  cobbDatasets.push(ds(t.tl,  d.cobb_tl,  slate,  true));
+
+            var cobbCanvas = document.getElementById('sv-chart-cobb');
+            if (cobbCanvas && cobbDatasets.length > 0) {
+                new Chart(cobbCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: cobbDatasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            title: { display: true, text: t.cobb_title },
+                            tooltip: {
+                                callbacks: {
+                                    title: function (items) {
+                                        if (!items.length) return '';
+                                        var i = items[0].dataIndex;
+                                        return t.date + ': ' + labels[i] + ' · ' + t.report + ' #' + d.rids[i];
+                                    },
+                                    label: function (item) {
+                                        if (item.parsed.y === null || item.parsed.y === undefined) return null;
+                                        return item.dataset.label + ': ' + item.parsed.y.toFixed(2) + '°';
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: t.angle_deg },
+                                ticks: { callback: function (v) { return v + '°'; } },
+                            },
+                            x: { ticks: { autoSkip: true, maxRotation: 0 } },
+                        },
+                    },
+                });
+            }
+
+            var vitalsCanvas = document.getElementById('sv-chart-vitals');
+            var vitalsDatasets = [];
+            if (hasAny(d.height_cm)) vitalsDatasets.push(Object.assign(ds(t.height, d.height_cm, primary), { yAxisID: 'yH' }));
+            if (hasAny(d.weight_kg)) vitalsDatasets.push(Object.assign(ds(t.weight, d.weight_kg, amber),   { yAxisID: 'yW' }));
+            if (vitalsCanvas && vitalsDatasets.length > 0) {
+                new Chart(vitalsCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: vitalsDatasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            title: { display: true, text: t.vitals_title },
+                            tooltip: {
+                                callbacks: {
+                                    title: function (items) {
+                                        if (!items.length) return '';
+                                        var i = items[0].dataIndex;
+                                        return t.date + ': ' + labels[i] + ' · ' + t.report + ' #' + d.rids[i];
+                                    },
+                                    label: function (item) {
+                                        if (item.parsed.y === null || item.parsed.y === undefined) return null;
+                                        var unit = item.dataset.yAxisID === 'yH' ? t.cm : t.kg;
+                                        return item.dataset.label + ': ' + item.parsed.y.toFixed(2) + unit;
+                                    },
+                                },
+                            },
+                        },
+                        scales: {
+                            yH: {
+                                type: 'linear',
+                                position: 'left',
+                                title: { display: true, text: t.height + ' (' + t.cm + ')' },
+                                grid: { drawOnChartArea: true },
+                            },
+                            yW: {
+                                type: 'linear',
+                                position: 'right',
+                                title: { display: true, text: t.weight + ' (' + t.kg + ')' },
+                                grid: { drawOnChartArea: false },
+                            },
+                            x: { ticks: { autoSkip: true, maxRotation: 0 } },
+                        },
+                    },
+                });
+            }
+        }
+        init();
+    });
+</script>
+<?php endif; ?>
 <?php sv_layout_end(); ?>

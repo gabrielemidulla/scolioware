@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 require __DIR__ . '/inc/db.php';
 require __DIR__ . '/inc/auth.php';
+require_once __DIR__ . '/inc/phi_log.php';
 require_once __DIR__ . '/inc/Locale.php';
 
 sv_session_start();
 Locale::init();
-
-try {
-    sv_ensure_admin();
-} catch (Throwable $e) {
-}
 
 if (sv_current_user() !== null) {
     header('Location: index.php');
@@ -21,6 +17,7 @@ if (sv_current_user() !== null) {
 
 $error = '';
 $username = '';
+$ip = trim((string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     sv_csrf_check();
@@ -28,6 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
     if ($username === '' || $password === '') {
         $error = __('login.error_required');
+    } elseif (sv_login_is_locked_out($ip, $username)) {
+        $error = __('login.error_locked');
     } else {
         $row = sv_find_physician_by_username($username);
         if ($row && password_verify($password, $row['password_hash'])) {
@@ -35,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 sv_set_password((int) $row['id'], $password);
             }
             sv_login_user($row);
+            sv_login_clear_throttle($ip, $username);
+            sv_phi_log('login_success', null, null, null);
             $next = isset($_GET['next']) ? (string) $_GET['next'] : 'index.php';
             if (!preg_match('#^/[A-Za-z0-9_\-./?=&%]*$#', $next)) {
                 $next = 'index.php';
@@ -42,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . $next);
             exit;
         }
+        sv_login_record_failure($ip, $username);
+        sv_phi_log('login_failed', null, null, null);
         $error = __('login.error_invalid');
     }
 }

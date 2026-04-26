@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import dotenv
@@ -17,59 +18,83 @@ for _p in _dotenv_candidates:
         dotenv.load_dotenv(_p)
 dotenv.load_dotenv()
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    from src.worker import start_worker
-
-    paths = sorted(
-        {getattr(r, "path", "") for r in app.routes if getattr(r, "path", None)}
-    )
-    print("inference: registered HTTP paths:", ", ".join(paths), flush=True)
-
-    stop = start_worker()
-    yield
-    stop.set()
-
-
-app = FastAPI(lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-from src.api_reports import router as reports_router
-from src.api_pdf_reports import router as pdf_reports_router
-
-app.include_router(reports_router)
-app.include_router(pdf_reports_router)
-
 from io import BytesIO
 
 import cv2 as cv
 import numpy as np
+import structlog
+from fastapi import FastAPI, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+from src.api_internal import router as internal_router
+from src.api_pdf_reports import router as pdf_reports_router
+from src.api_reports import router as reports_router
 
-from src.kprcnn import predict, kprcnn_to_api_format
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer()
+            if (os.environ.get("STRUCTLOG_JSON") or "").strip().lower()
+            not in ("1", "true", "yes")
+            else structlog.processors.JSONRenderer(),
+        ]
+    )
+    log = structlog.get_logger("inference")
+
+    paths = sorted(
+        {getattr(r, "path", "") for r in app.routes if getattr(r, "path", None)}
+    )
+    log.info("http_routes", path_list=", ".join(paths))
+    log.info("queue_mode", backend="rq", queues="sv_reports,sv_llm")
+    yield
+
+
+app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+
+_cors = [
+    o.strip()
+    for o in os.environ.get("CORS_ALLOW_ORIGIN", "http://localhost:8080,http://127.0.0.1:8080").split(",")
+    if o.strip()
+]
+if _cors:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+app.include_router(reports_router)
+app.include_router(pdf_reports_router)
+app.include_router(internal_router)
+
+from src.kprcnn import kprcnn_to_api_format, predict
 
 
 @app.get("/")
 async def read_root():
-    print("Read Root started")
     return {
         "Hello": "World",
-        "Message": "Welcome to Scoliosoft-API! Send a POST request these APIs to get started!",
-        "ModelPredict": "/v2/getprediction",
-        "EnqueueScan": "POST /enqueue or POST /v2/enqueue (multipart: patient_id, image; optional height_cm, weight_kg)",
-        "ReportStatus": "GET /reports/{report_id}",
+        "Message": "Scoliosoft inference (internal + dashboard-proxied only).",
+        "Health": "GET /healthz",
+    }
+
+
+@app.get("/healthz")
+async def healthz() -> dict[str, str]:
+    from src import storage_r2
+    from src.rq_tasks import ping as redis_ping
+
+    return {
+        "status": "ok",
+        "redis": "ok" if redis_ping() else "down",
+        "r2": "ok" if storage_r2.r2_configured() else "missing",
     }
 
 

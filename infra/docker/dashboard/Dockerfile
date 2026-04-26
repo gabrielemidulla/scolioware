@@ -19,4 +19,6 @@ RUN mkdir -p /usr/local/lib \
 
 ENV SV_TCPDF_PATH=/usr/local/lib/tcpdf
 
+COPY infra/config/php/zz-pool.conf /usr/local/etc/php-fpm.d/zz-pool.conf
+
 WORKDIR /var/www/html

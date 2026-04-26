@@ -1,11 +1,16 @@
 import json
 import re
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
+import structlog
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from src import persistence, storage_r2
+from src.dicom_ingest import decode_upload_to_jpeg
+from src.rq_tasks import enqueue_process_report
+
+log = structlog.get_logger("api_reports")
 
 router = APIRouter(tags=["reports"])
 
@@ -32,7 +37,7 @@ def _json_scalar(v: Any) -> Any:
     return v
 
 
-def _optional_vital_cm_kg(raw: Optional[str], label: str, lo: float, hi: float) -> Optional[float]:
+def _optional_vital_cm_kg(raw: str | None, label: str, lo: float, hi: float) -> float | None:
     if raw is None or not str(raw).strip():
         return None
     s = str(raw).strip().replace(",", ".")
@@ -57,7 +62,7 @@ def _loads(v: Any) -> Any:
 async def enqueue_scan(
     patient_id: int = Form(...),
     image: UploadFile = File(...),
-    height_cm: str = Form(""),  # default so omitted fields do not 422
+    height_cm: str = Form(""),
     weight_kg: str = Form(""),
 ):
     if not storage_r2.r2_configured():
@@ -78,19 +83,14 @@ async def enqueue_scan(
     report_id = persistence.insert_report_pending(patient_id, height_cm=h, weight_kg=w)
     key = storage_r2.object_key_original(patient_id, report_id)
 
-    from io import BytesIO
-
-    from PIL import Image
-
+    image_name = (getattr(image, "filename", None) or "") or "upload"
     try:
-        img = Image.open(BytesIO(body)).convert("RGB")
-        out = BytesIO()
-        img.save(out, format="JPEG", quality=92)
-        jpeg = out.getvalue()
+        jpeg, dicom_meta = decode_upload_to_jpeg(body, image_name)
     except Exception as e:
-        persistence.mark_failed(report_id, f"Invalid image: {e!s}")
+        persistence.mark_failed(report_id, f"Invalid image or DICOM: {e!s}")
         raise HTTPException(
-            status_code=400, detail="Could not decode image as JPEG/PNG."
+            status_code=400,
+            detail="Could not decode the file as a raster image or DICOM.",
         ) from e
     try:
         storage_r2.put_bytes(key, jpeg, content_type="image/jpeg")
@@ -101,9 +101,38 @@ async def enqueue_scan(
             status_code=502, detail="Could not upload to object storage."
         ) from e
 
-    persistence.refresh_patient_last_vitals(patient_id)
+    if dicom_meta:
+        try:
+            persistence.set_dicom_metadata(report_id, dicom_meta)
+        except Exception as e:
+            log.warning("set_dicom_metadata_failed", report_id=report_id, error=str(e))
 
-    return {"report_id": report_id, "patient_id": patient_id, "status": "pending"}
+    try:
+        enqueue_process_report(report_id)
+    except Exception as e:
+        log.error("rq_enqueue_failed", report_id=report_id, error=str(e))
+        try:
+            persistence.mark_failed(
+                report_id,
+                f"Could not enqueue report for processing (Redis unavailable): {e!s}",
+            )
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=503,
+            detail="Background queue unavailable. Try again in a moment.",
+        ) from e
+
+    try:
+        persistence.refresh_patient_last_vitals(patient_id)
+    except Exception as e:
+        log.warning("refresh_patient_last_vitals_failed", patient_id=patient_id, error=str(e))
+
+    return {
+        "report_id": report_id,
+        "patient_id": patient_id,
+        "status": "pending",
+    }
 
 
 router.add_api_route("/enqueue", enqueue_scan, methods=["POST"])
@@ -128,28 +157,18 @@ async def get_report(report_id: int):
         if k in row and row[k] is not None:
             out[k] = _json_scalar(row[k])
 
-    if storage_r2.r2_configured() and row.get("original_object_key"):
-        out["presigned_original"] = storage_r2.presigned_get_url(row["original_object_key"])
-    else:
-        out["presigned_original"] = None
-
     if row["status"] == "completed":
         out["detections"] = _loads(row.get("detections_json"))
         out["landmarks"] = _loads(row.get("landmarks_json"))
         out["angles"] = _loads(row.get("angles_json"))
         out["midpoint_lines"] = _loads(row.get("midpoint_lines_json"))
-        if storage_r2.r2_configured() and row.get("computed_object_key"):
-            out["presigned_computed"] = storage_r2.presigned_get_url(row["computed_object_key"])
-        else:
-            out["presigned_computed"] = None
         for k in _REPORT_EXTRA_FIELDS:
             if k in row:
                 out[k] = _json_scalar(row[k])
         if row.get("report_metadata_json"):
             out["report_metadata"] = _loads(row.get("report_metadata_json"))
-    else:
-        out["presigned_computed"] = None
-
+        if row.get("dicom_metadata_json"):
+            out["dicom_metadata"] = _loads(row.get("dicom_metadata_json"))
     return out
 
 

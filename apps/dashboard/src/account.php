@@ -10,6 +10,7 @@ $user = sv_require_auth();
 
 $success = '';
 $error = '';
+$mustChange = isset($_GET['must_change']) && (string) $_GET['must_change'] === '1';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     sv_csrf_check();
@@ -50,6 +51,11 @@ sv_topbar(
         <?php endif; ?>
     </div>
     <div class="sv-card-body">
+        <?php if ($mustChange && $success === ''): ?>
+            <div class="alert alert-warning py-2 mb-3" role="alert">
+                <i class="fa-solid fa-key"></i> <?= htmlspecialchars((string) __('account.must_change_notice'), ENT_QUOTES, 'UTF-8') ?>
+            </div>
+        <?php endif; ?>
         <?php if ($success !== ''): ?>
             <div class="alert alert-success py-2"><i class="fa-solid fa-circle-check"></i> <?= htmlspecialchars($success) ?></div>
         <?php endif; ?>

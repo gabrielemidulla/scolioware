@@ -1,6 +1,5 @@
 import os
 from functools import lru_cache
-from typing import Optional
 
 import boto3
 from botocore.client import BaseClient
@@ -49,7 +48,7 @@ def get_bytes(key: str) -> bytes:
     return resp["Body"].read()
 
 
-def presigned_get_url(key: str, expires_in: int = 3600) -> Optional[str]:
+def presigned_get_url(key: str, expires_in: int = 3600) -> str | None:
     if not key:
         return None
     return _client().generate_presigned_url(

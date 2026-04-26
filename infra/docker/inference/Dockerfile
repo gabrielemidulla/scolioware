@@ -12,6 +12,8 @@ RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
 COPY apps/inference/main.py .
+COPY apps/inference/worker_main.py .
+COPY apps/inference/worker_llm_main.py .
 COPY infra/docker/inference/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY apps/inference/src/ ./src/
 

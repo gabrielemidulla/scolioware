@@ -51,7 +51,7 @@ sv_topbar(
             </div>
             <div class="mb-3">
                 <label class="form-label"><?= htmlspecialchars((string) __('new_report.label_image'), ENT_QUOTES, 'UTF-8') ?></label>
-                <input class="form-control" type="file" id="image" accept="image/*">
+                <input class="form-control" type="file" id="image" accept="image/*,.dcm,.dicom,application/dicom">
             </div>
             <button type="button" id="btn" class="btn btn-primary">
                 <i class="fa-solid fa-paper-plane fa-fw"></i> <?= htmlspecialchars((string) __('new_report.submit'), ENT_QUOTES, 'UTF-8') ?>

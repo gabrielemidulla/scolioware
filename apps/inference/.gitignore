@@ -1,4 +1,5 @@
 venv
+.venv
 .deta
 __pycache__
 .detaignore
