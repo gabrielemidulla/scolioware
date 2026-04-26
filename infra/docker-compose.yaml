@@ -4,7 +4,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ../apps/dashboard/src:/var/www/html
+      - ../apps/dashboard:/var/www/html
       - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       php:
@@ -19,9 +19,9 @@ services:
       context: ..
       dockerfile: infra/docker/dashboard/Dockerfile
     env_file:
-      - ../apps/dashboard/src/.env
+      - ../apps/dashboard/.env
     volumes:
-      - ../apps/dashboard/src:/var/www/html
+      - ../apps/dashboard:/var/www/html
       - ./config/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     environment:
       MYSQL_HOST: mysql

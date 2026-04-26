@@ -9,7 +9,7 @@ RUN apt-get update \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" pdo pdo_mysql mysqli gd zip
 
-# Composer: run `composer install` in `apps/dashboard/src` (bind-mounted as /var/www/html in compose).
+# Composer: run `composer install` in `apps/dashboard` (bind-mounted as /var/www/html in compose).
 RUN curl -fsSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # TCPDF is vendored at /usr/local/lib/tcpdf so the bind-mount on /var/www/html stays untouched.

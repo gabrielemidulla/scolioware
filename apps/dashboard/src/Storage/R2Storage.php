@@ -25,7 +25,7 @@ final class R2Storage
         $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
         if (!is_readable($autoload)) {
             throw new RuntimeException(
-                'Composer vendor/autoload.php is missing. Run `composer install` in apps/dashboard/src.'
+                'Composer vendor/autoload.php is missing. Run `composer install` in apps/dashboard.'
             );
         }
         require_once $autoload;
