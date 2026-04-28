@@ -49,12 +49,14 @@ final class AccountController extends AbstractController
 
         return $this->render('account/index.html.twig', [
             'user' => $user,
+            'is_admin' => (int) ($user['is_admin'] ?? 0) === 1,
             'success' => $success,
             'error' => $error,
             'must_change' => $mustChange,
             'csrf_token' => sw_csrf_token(),
             'min_pw_len' => SW_MIN_PASSWORD_LEN,
             'html_lang' => SwLocale::htmlLang(),
+            'nav_route' => 'account',
         ]);
     }
 }

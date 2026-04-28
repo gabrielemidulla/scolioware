@@ -167,7 +167,7 @@
                                         </td>
                                     </tr>
                                 {% else %}
-                                    <tr><td colspan="5" class="text-center text-muted py-4">{{ 'report.pdf_empty'|trans }}</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted py-4">{{ 'report.pdf_empty'|trans|raw }}</td></tr>
                                 {% endfor %}
                                 </tbody>
                             </table>
@@ -196,7 +196,7 @@
                 </span>
                 <button type="button" id="open_landmark_editor" class="btn btn-sm btn-primary" style="display:none;"
                         data-bs-toggle="modal" data-bs-target="#svLandmarkEditor">
-                    <i class="fa-solid fa-compasw-drafting fa-fw"></i> {{ 'lmk.open_btn'|trans }}
+                    <i class="fa-solid fa-compass-drafting fa-fw"></i> {{ 'lmk.open_btn'|trans }}
                 </button>
             </div>
             <div class="sw-card-body flex-grow-1 d-flex flex-column min-h-0">
@@ -248,7 +248,7 @@
         <div class="modal-content bg-dark text-white">
             <div class="modal-header border-secondary py-2">
                 <h5 class="modal-title">
-                    <i class="fa-solid fa-compasw-drafting"></i>
+                    <i class="fa-solid fa-compass-drafting"></i>
                     {{ 'lmk.title'|trans }}
                 </h5>
                 <div class="ms-auto d-flex flex-wrap align-items-center gap-2">

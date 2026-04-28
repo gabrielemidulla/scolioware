@@ -24,6 +24,20 @@ SPINE_GAP_OUTLIER_RATIO = 2.0
 SPINE_MIN_VERTS_FOR_GAP_FILTER = 6
 SPINE_INTERIOR_GAP_FATAL_RATIO = 2.5
 
+# Two-pass auto-crop. SpineNet expects a 1024x512 input and resizes the
+# whole image to fit; on a full-body or square X-ray the spine ends up
+# squashed into a narrow column of the model input, mid-thoracic levels
+# go undetected, and the predicted rotations collapse toward zero. A
+# second pass on a tight spine crop puts 3-4x more pixels on every
+# vertebra, so the model finds the missing levels and predicts more
+# realistic rotations.
+SPINE_AUTOCROP_MIN_VERTS = 3  # need a few hits to localise the spine
+SPINE_AUTOCROP_MIN_W = 64
+SPINE_AUTOCROP_MIN_H = 128
+SPINE_AUTOCROP_SKIP_RATIO = 0.85  # both axes >=85% of full image -> already tight
+SPINE_AUTOCROP_PAD_X_RATIO = 1.0  # horizontal padding = 1x median vertebra width
+SPINE_AUTOCROP_PAD_Y_RATIO = 0.75  # vertical padding = 0.75x median vertebra height
+
 _model = None
 _decoder: DecDecoder | None = None
 
@@ -159,6 +173,62 @@ def _decoded_to_api(
     return bboxes, keypoints, scores
 
 
+def _detect_once(
+    img: np.ndarray,
+    model,
+    decoder: DecDecoder,
+    device: torch.device,
+) -> tuple[list[list[int]], list[list[list[float]]], list[float]]:
+    x = _preprocess(img).to(device)
+    output = model(x)
+    pts = decoder.ctdet_decode(output["hm"], output["wh"], output["reg"])
+    return _decoded_to_api(pts, img.shape)
+
+
+def _spine_crop_box(
+    bboxes: list[list[int]],
+    image_shape: tuple[int, ...],
+) -> tuple[int, int, int, int] | None:
+    """Tight crop around the detected vertebrae, padded by typical
+    vertebra size. Returns ``None`` when the input frame is already
+    tight enough that a second pass would add no resolution.
+    """
+    if len(bboxes) < SPINE_AUTOCROP_MIN_VERTS:
+        return None
+    h, w = int(image_shape[0]), int(image_shape[1])
+    widths = np.array([b[2] - b[0] for b in bboxes], dtype=float)
+    heights = np.array([b[3] - b[1] for b in bboxes], dtype=float)
+    if widths.size == 0 or heights.size == 0:
+        return None
+    pad_x = int(round(float(np.median(widths)) * SPINE_AUTOCROP_PAD_X_RATIO))
+    pad_y = int(round(float(np.median(heights)) * SPINE_AUTOCROP_PAD_Y_RATIO))
+    x0 = max(0, int(min(b[0] for b in bboxes)) - pad_x)
+    y0 = max(0, int(min(b[1] for b in bboxes)) - pad_y)
+    x1 = min(w, int(max(b[2] for b in bboxes)) + pad_x)
+    y1 = min(h, int(max(b[3] for b in bboxes)) + pad_y)
+    if x1 - x0 < SPINE_AUTOCROP_MIN_W or y1 - y0 < SPINE_AUTOCROP_MIN_H:
+        return None
+    if (
+        (x1 - x0) / float(w) >= SPINE_AUTOCROP_SKIP_RATIO
+        and (y1 - y0) / float(h) >= SPINE_AUTOCROP_SKIP_RATIO
+    ):
+        return None
+    return x0, y0, x1, y1
+
+
+def _shifted_detections(
+    bboxes: list[list[int]],
+    keypoints: list[list[list[float]]],
+    dx: int,
+    dy: int,
+) -> tuple[list[list[int]], list[list[list[float]]]]:
+    bboxes_shift = [[b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy] for b in bboxes]
+    keypoints_shift = [
+        [[p[0] + dx, p[1] + dy] for p in kps] for kps in keypoints
+    ]
+    return bboxes_shift, keypoints_shift
+
+
 def predict(
     images: np.ndarray,
 ) -> list[tuple[list[list[int]], list[list[list[float]]], list[float]]]:
@@ -181,11 +251,37 @@ def predict(
     results = []
     with torch.no_grad():
         for img in batch:
-            x = _preprocess(img).to(device)
-            output = model(x)
-            pts = decoder.ctdet_decode(output["hm"], output["wh"], output["reg"])
-            results.append(_decoded_to_api(pts, img.shape))
+            first = _detect_once(img, model, decoder, device)
+            results.append(_predict_with_autocrop(img, first, model, decoder, device))
     return results
+
+
+def _predict_with_autocrop(
+    img: np.ndarray,
+    first_pass: tuple[list[list[int]], list[list[list[float]]], list[float]],
+    model,
+    decoder: DecDecoder,
+    device: torch.device,
+) -> tuple[list[list[int]], list[list[list[float]]], list[float]]:
+    """Re-run detection on a tight spine crop and return the better of
+    the two passes. The second pass is preferred when it finds at least
+    as many vertebrae as the first; otherwise we keep the first pass so
+    a transient detector failure on the tight crop never regresses a
+    working full-image result.
+    """
+    bboxes, keypoints, scores = first_pass
+    crop_box = _spine_crop_box(bboxes, img.shape)
+    if crop_box is None:
+        return first_pass
+    x0, y0, x1, y1 = crop_box
+    crop = img[y0:y1, x0:x1]
+    if crop.size == 0:
+        return first_pass
+    bboxes2, keypoints2, scores2 = _detect_once(crop, model, decoder, device)
+    if len(bboxes2) < len(bboxes) or len(bboxes2) < SPINE_AUTOCROP_MIN_VERTS:
+        return first_pass
+    bboxes_shift, keypoints_shift = _shifted_detections(bboxes2, keypoints2, x0, y0)
+    return bboxes_shift, keypoints_shift, scores2
 
 
 def _chain_discontinuity(bboxes: list[list[int]]) -> tuple[float, float] | None:

@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-/** Create admin user (CLI). Prod: set SW_SEED_ADMIN_USER / SW_SEED_ADMIN_PASSWORD. */
+/** CLI: create first admin. Production requires SW_ADMIN_USER and SW_ADMIN_PASSWORD. */
 declare(strict_types=1);
 
 if (php_sapi_name() !== 'cli') {
@@ -17,8 +17,8 @@ require_once $dir . '/src/Auth/legacy_auth.php';
 
 $isProd = strtolower(trim((string) (getenv('APP_ENV') ?: getenv('APP_ENVIRONMENT') ?: ''))) === 'prod';
 
-$userRaw = trim((string) (getenv('SW_SEED_ADMIN_USER') ?: ''));
-$pwRaw = trim((string) (getenv('SW_SEED_ADMIN_PASSWORD') ?: ''));
+$userRaw = trim((string) (getenv('SW_ADMIN_USER') ?: ''));
+$pwRaw = trim((string) (getenv('SW_ADMIN_PASSWORD') ?: ''));
 $explicitCreds = $userRaw !== '' && $pwRaw !== '';
 
 if ($explicitCreds) {
@@ -28,7 +28,7 @@ if ($explicitCreds) {
     $minLen = SW_MIN_PASSWORD_LEN;
 } else {
     $username = 'admin';
-    $pw = 'ScoliowareDev1!';
+    $pw = 'admin12345';
     $mustChange = 1;
     $minLen = SW_MIN_PASSWORD_LEN;
 }
@@ -50,7 +50,7 @@ if ($count > 0) {
 }
 
 if ($isProd && !$explicitCreds) {
-    fwrite(STDERR, "seed_admin: production requires SW_SEED_ADMIN_USER and SW_SEED_ADMIN_PASSWORD (no default credentials).\n");
+    fwrite(STDERR, "seed_admin: production requires SW_ADMIN_USER and SW_ADMIN_PASSWORD (no default credentials).\n");
     exit(1);
 }
 

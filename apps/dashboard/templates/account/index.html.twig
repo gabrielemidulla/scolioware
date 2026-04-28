@@ -1,6 +1,14 @@
-{% extends 'layout/app_shell.html.twig' %}
+{% extends 'layout/sidebar_shell.html.twig' %}
 
-{% block title %}{{ 'account.title'|trans }}{% endblock %}
+{% block html_title %}{{ 'account.title'|trans }}{% endblock %}
+
+{% set topbar_breadcrumbs = [
+    { label: 'crumb.dashboard'|trans, href: path('home_index') },
+    { label: 'account.title'|trans },
+] %}
+{% set topbar_heading %}
+    <i class="fa-solid fa-key"></i> {{ 'account.title'|trans }}
+{% endset %}
 
 {% block body %}
 <div class="sw-card" style="max-width: 540px;">

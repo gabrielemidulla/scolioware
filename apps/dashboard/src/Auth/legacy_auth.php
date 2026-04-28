@@ -5,8 +5,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 const SW_TOKEN_TTL_HOURS = 24;
-const SW_MIN_PASSWORD_LEN = 12;
-const SW_SEED_ADMIN_PASSWORD_MIN_LEN = 12;
+const SW_MIN_PASSWORD_LEN = 10;
 
 const SW_LOGIN_MAX_ATTEMPTS = 5;
 const SW_LOGIN_LOCK_WINDOW_SEC = 300;
